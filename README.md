@@ -1,6 +1,6 @@
 # pySVS
 
-Python3 program to control SVS SB-1000PRO Subwoofer parameters using bluetooth interface. For the moment only parameters "Volume", "Phase", Low Pass Filter" and "Room Gain Compensation" are available.   
+Graphical Python3 program (Tkinter) to control SVS SB-1000PRO Subwoofer parameters using bluetooth interface. For the moment only parameters "Volume", "Phase", Low Pass Filter" and "Room Gain Compensation" are available.   
 
 The program requires pygatt module installed:  
 ```
