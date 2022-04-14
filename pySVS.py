@@ -60,8 +60,26 @@ CHAR22 = "00002a25-0000-1000-8000-00805f9b34fb"
 SERV04 = "00001801-0000-1000-8000-00805f9b34fb"
 CHAR31 = "00002a05-0000-1000-8000-00805f9b34fb"
 
-SVS_COMMANDS = {"SET": b'\xaa\xf0\x1f\x11\x00', "ASK": b'\xaa\xf1\x1f\x0f\x00'}
-SVS_PARAMS = {"VOLUME":b'\x04\x00\x00\x00\x2c\x00\x02', "PHASE":b'\x04\x00\x00\x00\x2e\x00\x02',"LOW_PASS_FILTER_ALL_SETTINGS":b'\x04\x00\x00\x00\x08\x00\x06', "LOW_PASS_FILTER_SLOPE":b'\x04\x00\x00\x00\x0c\x00\x02',"LFE":b'\x04\x00\x00\x00\x08\x00\x02', "LOW_PASS_FILTER":b'\x04\x00\x00\x00\x0a\x00\x02', "ROOM_GAIN_ALL_SETTINGS":b'\x04\x00\x00\x00\x26\x00\x06',"ROOM_GAIN_ENABLE":b'\x04\x00\x00\x00\x26\x00\x02', "ROOM_GAIN_FREQ":b'\x04\x00\x00\x00\x28\x00\x02', "ROOM_GAIN_SLOPE":b'\x04\x00\x00\x00\x2a\x00\x02', "PARAM_3":b'\x04\x00\x00\x00\x00\x00\x32',"PARAM_4":b'\x08\x00\x00\x00\x00\x00\x08',"PARAM_5": b'\x09\x00\x00\x00\x00\x00\x08',"PARAM_6":b'\x0a\x00\x00\x00\x00\x00\x08'}
+SVS_COMMANDS = 	{
+		"SET": b'\xaa\xf0\x1f\x11\x00', 
+		"ASK": b'\xaa\xf1\x1f\x0f\x00'
+		}
+SVS_PARAMS = 	{
+		"VOLUME":b'\x04\x00\x00\x00\x2c\x00\x02', 
+		"PHASE":b'\x04\x00\x00\x00\x2e\x00\x02',
+		"LOW_PASS_FILTER_ALL_SETTINGS":b'\x04\x00\x00\x00\x08\x00\x06',
+		"LOW_PASS_FILTER_SLOPE":b'\x04\x00\x00\x00\x0c\x00\x02',
+		"LFE":b'\x04\x00\x00\x00\x08\x00\x02',
+		"LOW_PASS_FILTER":b'\x04\x00\x00\x00\x0a\x00\x02',
+		"ROOM_GAIN_ALL_SETTINGS":b'\x04\x00\x00\x00\x26\x00\x06',
+		"ROOM_GAIN_ENABLE":b'\x04\x00\x00\x00\x26\x00\x02', 
+		"ROOM_GAIN_FREQ":b'\x04\x00\x00\x00\x28\x00\x02',
+		"ROOM_GAIN_SLOPE":b'\x04\x00\x00\x00\x2a\x00\x02',
+		"PARAM_3":b'\x04\x00\x00\x00\x00\x00\x32',
+		"PARAM_4":b'\x08\x00\x00\x00\x00\x00\x08',
+		"PARAM_5": b'\x09\x00\x00\x00\x00\x00\x08',
+		"PARAM_6":b'\x0a\x00\x00\x00\x00\x00\x08'
+		}
 ##############   End SB-1000-PRO CONFIG    #############################
 
 
@@ -404,6 +422,7 @@ try:
     window.protocol("WM_DELETE_WINDOW", on_closing)
     window.title("SVS Subwoofer Control")
     window.geometry('550x400')
+    window.resizable(False, False)
     style= ttk.Style()
     style.map("TCombobox", fieldbackground=[("readonly", "white"),("disabled", "gray") ])
     window.columnconfigure(16, weight=1)
