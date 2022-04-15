@@ -460,3 +460,20 @@ try:
     room_gain_slope_combo=ttk.Combobox(window,values=ROOM_GAIN_SLOPE_LIMITS,width=7,state='readonly')
     room_gain_slope_combo.grid(column=5, row=9)
     room_gain_slope_combo.bind("<<ComboboxSelected>>", update_room_gain_slope)
+    room_gain_var = BooleanVar(value=True)
+    room_gain_checkbox = ttk.Checkbutton(variable = room_gain_var, command=room_gain_opt_changed)
+    room_gain_checkbox.grid(sticky="W", column=6, row=9)
+
+    adapter.start(reset_on_start=False)
+    device = adapter.connect(SVS_MAC_ADDRESS)
+    for key in device.discover_characteristics().keys():
+        print(key)
+    print("\n\n")
+    threading()
+    window.mainloop()
+	
+except Exception as e:
+    print(e)
+
+finally:
+    adapter.stop()
