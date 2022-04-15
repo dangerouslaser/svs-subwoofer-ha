@@ -11,6 +11,7 @@ from threading import *
 SVS_MAC_ADDRESS = "12:34:56:78:9A:BC"
 #####################################
 
+
 ################    SB-1000-PRO CONFIG    #########################################
 STEP = 2560
 
@@ -306,7 +307,8 @@ def on_closing():
 
 ###########   AUX Routines   ###################
 def volume2hex(level):
-    if level == 0:
+    if level == VOL_LIMITS[1]:
+        #Max volume (level 0) provocates a 4 byte hex value in the std calc (0x10 0x00 0x00 0x00). Svs reads only the 3 last bytes. So max level = 0x00 0x00 0x00 
         volhex = level.to_bytes(3, 'little')
     else:
         volhex = (MIN_VOL + STEP_VOL*(level - VOL_LIMITS[0])).to_bytes(3, 'little')
@@ -458,20 +460,3 @@ try:
     room_gain_slope_combo=ttk.Combobox(window,values=ROOM_GAIN_SLOPE_LIMITS,width=7,state='readonly')
     room_gain_slope_combo.grid(column=5, row=9)
     room_gain_slope_combo.bind("<<ComboboxSelected>>", update_room_gain_slope)
-    room_gain_var = BooleanVar(value=True)
-    room_gain_checkbox = ttk.Checkbutton(variable = room_gain_var, command=room_gain_opt_changed)
-    room_gain_checkbox.grid(sticky="W", column=6, row=9)
-
-    adapter.start(reset_on_start=False)
-    device = adapter.connect(SVS_MAC_ADDRESS)
-    for key in device.discover_characteristics().keys():
-        print(key)
-    print("\n\n")
-    threading()
-    window.mainloop()
-	
-except Exception as e:
-    print(e)
-
-finally:
-    adapter.stop()
