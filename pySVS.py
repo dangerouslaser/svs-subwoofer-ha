@@ -306,12 +306,10 @@ def on_closing():
 
 ###########   AUX Routines   ###################
 def volume2hex(level):
-    if level >= VOL_LIMITS[0] and level < VOL_LIMITS[1]:
-        volhex = (MIN_VOL + STEP_VOL*(level - VOL_LIMITS[0])).to_bytes(3, 'little')
-    elif level == 0:
+    if level == 0:
         volhex = level.to_bytes(3, 'little')
     else:
-        print("Volume to set out of range")
+        volhex = (MIN_VOL + STEP_VOL*(level - VOL_LIMITS[0])).to_bytes(3, 'little')
     return volhex
 
 def hex2volume_slider_position(data):
@@ -325,10 +323,7 @@ def hex2volume_slider_position(data):
     return vol
 
 def phase2hex(level):
-    if level >= PHASE_LIMITS[0] and level <= PHASE_LIMITS[1]:
-        phasehex = (STEP_PHASE*level).to_bytes(3, 'little')
-    else:
-        print("Phase to set out of range")
+    phasehex = (STEP_PHASE*level).to_bytes(3, 'little')
     return phasehex
 
 def hex2phase_slider_position(data):
@@ -339,6 +334,10 @@ def hex2phase_slider_position(data):
         print("Unrecognized phase values received")
     return phase
 
+def lfe_state2hex(value):
+    lfe_opt_hex = (int(not(value)) * LFE_OFF).to_bytes(3, 'little')
+    return lfe_opt_hex
+
 def hex2lfe_state(data):
     lfe_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
     if lfe_abs == LFE_ON or lfe_abs == LFE_OFF:
@@ -347,15 +346,8 @@ def hex2lfe_state(data):
         print("Unrecognized LFE option value received")
     return lfe
 
-def lfe_state2hex(value):
-    lfe_opt_hex = (int(not(value)) * LFE_OFF).to_bytes(3, 'little')
-    return lfe_opt_hex
-
 def lp_freq2hex(freq):
-    if freq >= LP_FREQ_LIMITS[0] and freq <= LP_FREQ_LIMITS[1]:
-        freqhex = (STEP_LP_FREQ*freq).to_bytes(3, 'little')
-    else:
-        print("Low Pass Filter Frequency to set out of range")
+    freqhex = (STEP_LP_FREQ*freq).to_bytes(3, 'little')
     return freqhex
 
 def hex2lpfilter_slider_position(data):
@@ -385,6 +377,10 @@ def hex2lpfilter_slope_combo_position(data):
         print("Unrecognized low pass filter slope values received")
     return int(slope)
 
+def room_gain_state2hex(value):
+    room_gain_opt_hex = (int(value) * ROOM_GAIN_ON).to_bytes(3, 'little')
+    return room_gain_opt_hex
+
 def hex2room_gain_state(data):
     room_gain_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
     if room_gain_abs == ROOM_GAIN_ON or room_gain_abs == ROOM_GAIN_OFF:
@@ -392,10 +388,6 @@ def hex2room_gain_state(data):
     else:
         print("Unrecognized room gain option value received")
     return room_gain
-
-def room_gain_state2hex(value):
-    room_gain_opt_hex = (int(value) * ROOM_GAIN_ON).to_bytes(3, 'little')
-    return room_gain_opt_hex
 
 def room_gain_freq2hex(freq):
     freqhex = (freq * STEP_ROOM_GAIN_FREQ).to_bytes(3, 'little')
