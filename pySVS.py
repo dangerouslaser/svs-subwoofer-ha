@@ -43,7 +43,8 @@ ROOM_GAIN_OFF = 0
 ROOM_GAIN_FREQ_LIMITS = [25, 31, 40] #discrete values
 STEP_ROOM_GAIN_FREQ = STEP
 MIN_ROOM_GAIN_FREQ = STEP_ROOM_GAIN_FREQ * ROOM_GAIN_FREQ_LIMITS[0]
-MAX_ROOM_GAIN_FREQ = STEP_ROOM_GAIN_FREQ * ROOM_GAIN_FREQ_LIMITS[1]
+MEDIUM_ROOM_GAIN_FREQ = STEP_ROOM_GAIN_FREQ * ROOM_GAIN_FREQ_LIMITS[1]
+MAX_ROOM_GAIN_FREQ = STEP_ROOM_GAIN_FREQ * ROOM_GAIN_FREQ_LIMITS[2]
 
 ROOM_GAIN_SLOPE_LIMITS = ["6 dB", "12 dB"] #discrete values. Add units to show in the associated combo
 STEP_ROOM_GAIN_SLOPE = 6 * STEP
@@ -403,7 +404,7 @@ def hex2room_gain_freq(data):
         freq_abs = 16*16*16*16*data[20] + 16*16*data[19] + data[18]
     else:
         freq_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
-    if freq_abs in [MIN_ROOM_GAIN_FREQ, 79360 ,MAX_ROOM_GAIN_FREQ]:
+    if freq_abs in [MIN_ROOM_GAIN_FREQ, MEDIUM_ROOM_GAIN_FREQ ,MAX_ROOM_GAIN_FREQ]:
         freq = freq_abs / STEP_ROOM_GAIN_FREQ
     else:
         print("Unrecognized room gain frequency values received")
