@@ -45,6 +45,7 @@ STEP_ROOM_GAIN_FREQ = STEP
 MIN_ROOM_GAIN_FREQ = STEP_ROOM_GAIN_FREQ * ROOM_GAIN_FREQ_LIMITS[0]
 MEDIUM_ROOM_GAIN_FREQ = STEP_ROOM_GAIN_FREQ * ROOM_GAIN_FREQ_LIMITS[1]
 MAX_ROOM_GAIN_FREQ = STEP_ROOM_GAIN_FREQ * ROOM_GAIN_FREQ_LIMITS[2]
+ROOM_GAIN_FREQ_VALUES = [MIN_ROOM_GAIN_FREQ, MEDIUM_ROOM_GAIN_FREQ, MAX_ROOM_GAIN_FREQ ]
 
 ROOM_GAIN_SLOPE_LIMITS = ["6 dB", "12 dB"] #discrete values. Add units to show in the associated combo
 STEP_ROOM_GAIN_SLOPE = 6 * STEP
@@ -377,9 +378,10 @@ def hex2lpfilter_slope_combo_position(data):
         slope_abs = 16*16*data[21]
     else:
         slope_abs = 16*16*data[17] + data[16]
-    if slope_abs >= MIN_LP_SLOPE and slope_abs <= MAX_LP_SLOPE:
+    if str(6*int(slope_abs/STEP_LP_SLOPE)) + " dB" in LP_SLOPE_LIMITS:
         slope = slope_abs / STEP_LP_SLOPE - 1
     else:
+        print(str(6*slope_abs/STEP_LP_SLOPE) + " dB")
         print("Unrecognized low pass filter slope values received")
     return int(slope)
 
@@ -404,7 +406,7 @@ def hex2room_gain_freq(data):
         freq_abs = 16*16*16*16*data[20] + 16*16*data[19] + data[18]
     else:
         freq_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
-    if freq_abs in [MIN_ROOM_GAIN_FREQ, MEDIUM_ROOM_GAIN_FREQ ,MAX_ROOM_GAIN_FREQ]:
+    if freq_abs in ROOM_GAIN_FREQ_VALUES:
         freq = freq_abs / STEP_ROOM_GAIN_FREQ
     else:
         print("Unrecognized room gain frequency values received")
@@ -419,8 +421,8 @@ def hex2room_gain_slope_combo_position(data):
         slope_abs = 16*16*data[21]
     else:
         slope_abs = 16*16*data[17] + data[16]
-    if slope_abs >= MIN_ROOM_GAIN_SLOPE and slope_abs <= MAX_ROOM_GAIN_SLOPE:
-        slope = slope_abs / STEP_LP_SLOPE - 1
+    if (str(6*int(slope_abs / STEP_ROOM_GAIN_SLOPE)) + " dB") in ROOM_GAIN_SLOPE_LIMITS:
+        slope = slope_abs / STEP_ROOM_GAIN_SLOPE - 1
     else:
         print("Unrecognized room gain slope values received")
     return int(slope)
