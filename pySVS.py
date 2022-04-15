@@ -12,35 +12,44 @@ SVS_MAC_ADDRESS = "12:34:56:78:9A:BC"
 #####################################
 
 ################    SB-1000-PRO CONFIG    #########################################
-MIN_VOL = 16623616
-STEP_VOL = 2560
-MAX_VOL = MIN_VOL + STEP_VOL*60
+STEP = 2560
 
-MIN_PHASE = 0
-STEP_PHASE = 2560
-MAX_PHASE = STEP_PHASE * 180
+VOL_LIMITS = [-60,0]
+STEP_VOL = STEP
+MIN_VOL = 0x1000000 + STEP_VOL * VOL_LIMITS[0]
+MAX_VOL = MIN_VOL + STEP_VOL*(VOL_LIMITS[1] - VOL_LIMITS[0])
+
+PHASE_LIMITS = [0, 180]
+STEP_PHASE = STEP
+MIN_PHASE = STEP_PHASE*PHASE_LIMITS[0]
+MAX_PHASE = MIN_PHASE + STEP_PHASE * (PHASE_LIMITS[1] - PHASE_LIMITS[0])
 
 LFE_ON = 0
-LFE_OFF = 2560
+LFE_OFF = STEP
 
-MIN_LP_FREQ = 76800
-STEP_LP_FREQ = 2560
-MAX_LP_FREQ = MIN_LP_FREQ + STEP_LP_FREQ * (200 - 30)
+LP_FREQ_LIMITS = [30, 200]
+STEP_LP_FREQ = STEP
+MIN_LP_FREQ = STEP_LP_FREQ * LP_FREQ_LIMITS[0]
+MAX_LP_FREQ = MIN_LP_FREQ + STEP_LP_FREQ*(LP_FREQ_LIMITS[1] - LP_FREQ_LIMITS[0])
 
-MIN_LP_SLOPE = 15360
-STEP_LP_SLOPE = 15360
-MAX_LP_SLOPE = MIN_LP_SLOPE + STEP_LP_SLOPE * 3
+LP_SLOPE_LIMITS = ["6 dB", "12 dB", "18 dB", "24 dB"] #discrete values. Add units to show in the associated combo
+STEP_LP_SLOPE = 6 * STEP
+MIN_LP_SLOPE = STEP_LP_SLOPE
+MAX_LP_SLOPE = MIN_LP_SLOPE + STEP_LP_SLOPE * (len(LP_SLOPE_LIMITS) - 1)
 
-ROOM_GAIN_ON = 0
-ROOM_GAIN_OFF = 2560
+ROOM_GAIN_ON = STEP
+ROOM_GAIN_OFF = 0
 
-MIN_ROOM_GAIN_FREQ = 64000
-STEP_ROOM_GAIN_FREQ = 2560
-MAX_ROOM_GAIN_FREQ = MIN_ROOM_GAIN_FREQ + STEP_ROOM_GAIN_FREQ*(40 - 25)
+ROOM_GAIN_FREQ_LIMITS = [25, 31, 40] #discrete values
+STEP_ROOM_GAIN_FREQ = STEP
+MIN_ROOM_GAIN_FREQ = STEP_ROOM_GAIN_FREQ * ROOM_GAIN_FREQ_LIMITS[0]
+MAX_ROOM_GAIN_FREQ = MIN_ROOM_GAIN_FREQ + STEP_ROOM_GAIN_FREQ*(ROOM_GAIN_FREQ_LIMITS[1] - ROOM_GAIN_FREQ_LIMITS[0])
 
-MIN_ROOM_GAIN_SLOPE = 15360
-STEP_ROOM_GAIN_SLOPE = 15360
-MAX_ROOM_GAIN_SLOPE = MIN_ROOM_GAIN_SLOPE + STEP_ROOM_GAIN_SLOPE
+ROOM_GAIN_SLOPE_LIMITS = ["6 dB", "12 dB"] #discrete values. Add units to show in the associated combo
+STEP_ROOM_GAIN_SLOPE = 6 * STEP
+MIN_ROOM_GAIN_SLOPE = STEP_ROOM_GAIN_SLOPE
+MAX_ROOM_GAIN_SLOPE = MIN_ROOM_GAIN_SLOPE + STEP_ROOM_GAIN_SLOPE * (len(ROOM_GAIN_SLOPE_LIMITS) - 1)
+
 
 SERV01 = "0000fef6-0000-1000-8000-00805f9b34fb"
 CHAR01 = "005f0005-2ff2-4ed5-b045-4c7463617865"
@@ -231,7 +240,7 @@ def crcb(*i):
 ###############   GUI Routines   ######################
 
 def update_vol(self):
-    svs("SET","VOLUME",volume2hex(vol_slider.get()+60))
+    svs("SET","VOLUME",volume2hex(vol_slider.get()))
 
 def update_phase(self):
     svs("SET","PHASE",phase2hex(phase_slider.get()))
@@ -241,7 +250,9 @@ def lfe_opt_changed():
     svs("SET","LFE",lfe_state2hex(lfe_var.get()))
 
 def update_lpfilter_freq(self):
-    svs("SET","LOW_PASS_FILTER",lp_freq2hex(lpfilter_slider.get()))
+    if not lfe_var.get():
+    #as this callback is called when the click is released, be sure only to send svs set only if lfe = off
+        svs("SET","LOW_PASS_FILTER",lp_freq2hex(lpfilter_slider.get()))
 
 def update_lpfilter_slope(self):
     svs("SET","LOW_PASS_FILTER_SLOPE",lpfilter_slope2hex(lpfilter_slope_combo.current()))
@@ -251,13 +262,15 @@ def room_gain_opt_changed():
     svs("SET","ROOM_GAIN_ENABLE", room_gain_state2hex(room_gain_var.get()))
 
 def update_room_gain_freq(self):
-    svs("SET","ROOM_GAIN_FREQ", room_gain_freq2hex(room_gain_slider.get()))
+    if room_gain_var.get():
+    #as this callback is called when the click is released, be sure only to send svs set only if room_gain = on
+        svs("SET","ROOM_GAIN_FREQ", room_gain_freq2hex(room_gain_slider.get()))
 
 def update_room_gain_slope(self):
     svs("SET","ROOM_GAIN_SLOPE", room_gain_slope2hex(room_gain_slope_combo.current()))
 
 def make_discrete_slider(value):
-    new_value = min(room_gain_freq_values, key=lambda x:abs(x-float(value)))
+    new_value = min(ROOM_GAIN_FREQ_LIMITS, key=lambda x:abs(x-float(value)))
     room_gain_slider.set(new_value)
 
 def refresh_conditional_widgets():
@@ -291,10 +304,10 @@ def on_closing():
 
 ###########   AUX Routines   ###################
 def volume2hex(level):
-    if level >= 0 and level < 60:
-        volhex = (MIN_VOL + STEP_VOL*level).to_bytes(3, 'little')
-    elif level == 60:
-        volhex = b'\x00\x00\x00'
+    if level >= VOL_LIMITS[0] and level < VOL_LIMITS[1]:
+        volhex = (MIN_VOL + STEP_VOL*(level - VOL_LIMITS[0])).to_bytes(3, 'little')
+    elif level == 0:
+        volhex = level.to_bytes(3, 'little')
     else:
         print("Volume to set out of range")
     return volhex
@@ -302,15 +315,15 @@ def volume2hex(level):
 def hex2volume_slider_position(data):
     vol_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
     if vol_abs >= MIN_VOL and vol_abs <= MAX_VOL:
-        vol = ((vol_abs - MIN_VOL)/STEP_VOL) - 60
+        vol = ((vol_abs - MIN_VOL)/STEP_VOL) + VOL_LIMITS[0]
     elif vol_abs == 0:
-        vol = 60
+        vol = VOL_LIMITS[1]
     else:
         print("Unrecognized volume values received")
     return vol
 
 def phase2hex(level):
-    if level >= 0 and level < 180:
+    if level >= PHASE_LIMITS[0] and level <= PHASE_LIMITS[1]:
         phasehex = (STEP_PHASE*level).to_bytes(3, 'little')
     else:
         print("Phase to set out of range")
@@ -319,7 +332,7 @@ def phase2hex(level):
 def hex2phase_slider_position(data):
     phase_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
     if phase_abs >= MIN_PHASE and phase_abs <= MAX_PHASE:
-        phase = phase_abs / STEP_PHASE
+        phase = phase_abs/STEP_PHASE
     else:
         print("Unrecognized phase values received")
     return phase
@@ -333,11 +346,11 @@ def hex2lfe_state(data):
     return lfe
 
 def lfe_state2hex(value):
-    lfe_opt_hex = (int(not(value)) * 2560).to_bytes(3, 'little')
+    lfe_opt_hex = (int(not(value)) * LFE_OFF).to_bytes(3, 'little')
     return lfe_opt_hex
 
 def lp_freq2hex(freq):
-    if freq >= 30 and freq <= 200:
+    if freq >= LP_FREQ_LIMITS[0] and freq <= LP_FREQ_LIMITS[1]:
         freqhex = (STEP_LP_FREQ*freq).to_bytes(3, 'little')
     else:
         print("Low Pass Filter Frequency to set out of range")
@@ -378,11 +391,11 @@ def hex2room_gain_state(data):
     return room_gain
 
 def room_gain_state2hex(value):
-    room_gain_opt_hex = (int(value) * 2560).to_bytes(3, 'little')
+    room_gain_opt_hex = (int(value) * ROOM_GAIN_ON).to_bytes(3, 'little')
     return room_gain_opt_hex
 
 def room_gain_freq2hex(freq):
-    freqhex = (MIN_ROOM_GAIN_FREQ + (freq - 25) * STEP_ROOM_GAIN_FREQ).to_bytes(3, 'little')
+    freqhex = (freq * STEP_ROOM_GAIN_FREQ).to_bytes(3, 'little')
     return freqhex
 
 def hex2room_gain_freq(data):
@@ -391,7 +404,7 @@ def hex2room_gain_freq(data):
     else:
         freq_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
     if freq_abs in [MIN_ROOM_GAIN_FREQ, 79360 ,MAX_ROOM_GAIN_FREQ]:
-        freq = 25 + (freq_abs - MIN_ROOM_GAIN_FREQ) / STEP_ROOM_GAIN_FREQ
+        freq = freq_abs / STEP_ROOM_GAIN_FREQ
     else:
         print("Unrecognized room gain frequency values received")
     return int(freq)
@@ -426,29 +439,28 @@ try:
     style.map("TCombobox", fieldbackground=[("readonly", "white"),("disabled", "gray") ])
     window.columnconfigure(16, weight=1)
 
-    vol_slider = Scale(window, from_=-60, to=0, label = "Volume (dB)", orient=HORIZONTAL, resolution=1, length=200)
+    vol_slider = Scale(window, from_=VOL_LIMITS[0], to=VOL_LIMITS[1], label = "Volume (dB)", orient=HORIZONTAL, resolution=1, length=200)
     vol_slider.grid(column=4, row=3, padx = 20, pady = 15)
     vol_slider.bind("<ButtonRelease-1>", update_vol)
 
-    phase_slider = Scale(window, from_=0, to=180, label = "Phase (°)", orient=HORIZONTAL, resolution=1, length=200)
+    phase_slider = Scale(window, from_=PHASE_LIMITS[0], to=PHASE_LIMITS[1], label = "Phase (°)", orient=HORIZONTAL, resolution=1, length=200)
     phase_slider.grid(column=4, row=5, padx = 20, pady = 15)
     phase_slider.bind("<ButtonRelease-1>", update_phase)
 
-    lpfilter_slider = Scale(window, from_=30, to=200, label = "Low Pass Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200)
+    lpfilter_slider = Scale(window, from_=LP_FREQ_LIMITS[0], to=LP_FREQ_LIMITS[1], label = "Low Pass Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200)
     lpfilter_slider.grid(column=4, row=7, padx = 20, pady = 15)
     lpfilter_slider.bind("<ButtonRelease-1>", update_lpfilter_freq)
-    lpfilter_slope_combo=ttk.Combobox(window,values=["6 dB","12 dB","18 dB","24 dB"],width=7,state='readonly')
+    lpfilter_slope_combo=ttk.Combobox(window,values=LP_SLOPE_LIMITS,width=7,state='readonly')
     lpfilter_slope_combo.grid(column=5, row=7)
     lpfilter_slope_combo.bind("<<ComboboxSelected>>", update_lpfilter_slope)
     lfe_var = BooleanVar(value=False)
     lfe_checkbox = ttk.Checkbutton(variable=lfe_var, command=lfe_opt_changed)
     lfe_checkbox.grid(sticky="W", column=6, row=7)
 
-    room_gain_freq_values = [25,31,40]
-    room_gain_slider = Scale(window, from_=min(room_gain_freq_values), to=max(room_gain_freq_values), label = "Room Gain Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200, command=make_discrete_slider)
+    room_gain_slider = Scale(window, from_=min(ROOM_GAIN_FREQ_LIMITS), to=max(ROOM_GAIN_FREQ_LIMITS), label = "Room Gain Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200, command=make_discrete_slider)
     room_gain_slider.bind("<ButtonRelease-1>", update_room_gain_freq)
     room_gain_slider.grid(column=4, row=9, padx = 20, pady = 15)
-    room_gain_slope_combo=ttk.Combobox(window,values=["6 dB","12 dB"],width=7,state='readonly')
+    room_gain_slope_combo=ttk.Combobox(window,values=ROOM_GAIN_SLOPE_LIMITS,width=7,state='readonly')
     room_gain_slope_combo.grid(column=5, row=9)
     room_gain_slope_combo.bind("<<ComboboxSelected>>", update_room_gain_slope)
     room_gain_var = BooleanVar(value=True)
