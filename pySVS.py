@@ -11,7 +11,6 @@ from threading import *
 SVS_MAC_ADDRESS = "12:34:56:78:9A:BC"
 #####################################
 
-
 ################    SB-1000-PRO CONFIG    #########################################
 MIN_VOL = 16623616
 STEP_VOL = 2560
@@ -427,15 +426,15 @@ try:
     style.map("TCombobox", fieldbackground=[("readonly", "white"),("disabled", "gray") ])
     window.columnconfigure(16, weight=1)
 
-    vol_slider = Scale(window, from_=-60, to=0, label = "Volume", orient=HORIZONTAL, resolution=1, length=200)
+    vol_slider = Scale(window, from_=-60, to=0, label = "Volume (dB)", orient=HORIZONTAL, resolution=1, length=200)
     vol_slider.grid(column=4, row=3, padx = 20, pady = 15)
     vol_slider.bind("<ButtonRelease-1>", update_vol)
 
-    phase_slider = Scale(window, from_=0, to=180, label = "Phase", orient=HORIZONTAL, resolution=1, length=200)
+    phase_slider = Scale(window, from_=0, to=180, label = "Phase (°)", orient=HORIZONTAL, resolution=1, length=200)
     phase_slider.grid(column=4, row=5, padx = 20, pady = 15)
     phase_slider.bind("<ButtonRelease-1>", update_phase)
 
-    lpfilter_slider = Scale(window, from_=30, to=200, label = "Low Pass Freq.", orient=HORIZONTAL, resolution=1, length=200)
+    lpfilter_slider = Scale(window, from_=30, to=200, label = "Low Pass Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200)
     lpfilter_slider.grid(column=4, row=7, padx = 20, pady = 15)
     lpfilter_slider.bind("<ButtonRelease-1>", update_lpfilter_freq)
     lpfilter_slope_combo=ttk.Combobox(window,values=["6 dB","12 dB","18 dB","24 dB"],width=7,state='readonly')
@@ -446,7 +445,7 @@ try:
     lfe_checkbox.grid(sticky="W", column=6, row=7)
 
     room_gain_freq_values = [25,31,40]
-    room_gain_slider = Scale(window, from_=min(room_gain_freq_values), to=max(room_gain_freq_values), label = "Room Gain Freq.", orient=HORIZONTAL, resolution=1, length=200, command=make_discrete_slider)
+    room_gain_slider = Scale(window, from_=min(room_gain_freq_values), to=max(room_gain_freq_values), label = "Room Gain Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200, command=make_discrete_slider)
     room_gain_slider.bind("<ButtonRelease-1>", update_room_gain_freq)
     room_gain_slider.grid(column=4, row=9, padx = 20, pady = 15)
     room_gain_slope_combo=ttk.Combobox(window,values=["6 dB","12 dB"],width=7,state='readonly')
