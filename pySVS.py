@@ -44,9 +44,7 @@ ROOM_GAIN_OFF = 0
 ROOM_GAIN_FREQ_LIMITS = [25, 31, 40] #discrete values
 STEP_ROOM_GAIN_FREQ = STEP
 MIN_ROOM_GAIN_FREQ = STEP_ROOM_GAIN_FREQ * ROOM_GAIN_FREQ_LIMITS[0]
-MEDIUM_ROOM_GAIN_FREQ = STEP_ROOM_GAIN_FREQ * ROOM_GAIN_FREQ_LIMITS[1]
 MAX_ROOM_GAIN_FREQ = STEP_ROOM_GAIN_FREQ * ROOM_GAIN_FREQ_LIMITS[2]
-ROOM_GAIN_FREQ_VALUES = [MIN_ROOM_GAIN_FREQ, MEDIUM_ROOM_GAIN_FREQ, MAX_ROOM_GAIN_FREQ ]
 
 ROOM_GAIN_SLOPE_LIMITS = ["6 dB", "12 dB"] #discrete values. Add units to show in the associated combo
 STEP_ROOM_GAIN_SLOPE = 6 * STEP
@@ -81,7 +79,7 @@ SVS_PARAMS = 	{
 		"LOW_PASS_FILTER_ALL_SETTINGS":b'\x04\x00\x00\x00\x08\x00\x06',
 		"LOW_PASS_FILTER_SLOPE":b'\x04\x00\x00\x00\x0c\x00\x02',
 		"LFE":b'\x04\x00\x00\x00\x08\x00\x02',
-		"LOW_PASS_FILTER":b'\x04\x00\x00\x00\x0a\x00\x02',
+		"LOW_PASS_FILTER_FREQ":b'\x04\x00\x00\x00\x0a\x00\x02',
 		"ROOM_GAIN_ALL_SETTINGS":b'\x04\x00\x00\x00\x26\x00\x06',
 		"ROOM_GAIN_ENABLE":b'\x04\x00\x00\x00\x26\x00\x02', 
 		"ROOM_GAIN_FREQ":b'\x04\x00\x00\x00\x28\x00\x02',
@@ -117,45 +115,49 @@ def handle_data(handle, value):
         crc_error = False
         FULL_FRAME = PARTIAL_FRAME
         if SVS_PARAMS["VOLUME"] in FULL_FRAME:
-            print("Received VOLUME data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
+            print("<- Received VOLUME data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             vol_slider.set(hex2volume_slider_position(FULL_FRAME))
         elif SVS_PARAMS["PHASE"] in FULL_FRAME:
-            print("Received PHASE data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
+            print("<- Received PHASE data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             phase_slider.set(hex2phase_slider_position(FULL_FRAME))
         elif SVS_PARAMS["LFE"] in FULL_FRAME:
-            print("Received LFE data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
+            print("<- Received LFE data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             lfe_var.set(hex2lfe_state(FULL_FRAME))
             refresh_conditional_widgets()
-        elif SVS_PARAMS["LOW_PASS_FILTER"] in FULL_FRAME:
-            print("Received LOW PASS FILTER data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
+        elif SVS_PARAMS["LOW_PASS_FILTER_FREQ"] in FULL_FRAME:
+            print("<- Received LOW PASS FILTER FREQUENCY data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             lpfilter_slider.set(hex2lpfilter_slider_position(FULL_FRAME))
         elif SVS_PARAMS["LOW_PASS_FILTER_SLOPE"] in FULL_FRAME:
-            print("Received LOW PASS FILTER SLOPE data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
+            print("<- Received LOW PASS FILTER SLOPE data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             lpfilter_slope_combo.current(hex2lpfilter_slope_combo_position(FULL_FRAME))
         elif SVS_PARAMS["LOW_PASS_FILTER_ALL_SETTINGS"] in FULL_FRAME:
-            print("Received LOW_PASS_FILTER_FULL_SETTINGS data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
+            print("<- Received LOW_PASS_FILTER_FULL_SETTINGS data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             lpfilter_slider.set(hex2lpfilter_slider_position(FULL_FRAME))
             lpfilter_slope_combo.current(hex2lpfilter_slope_combo_position(FULL_FRAME))
             lfe_var.set(hex2lfe_state(FULL_FRAME))
             refresh_conditional_widgets()
         elif SVS_PARAMS["ROOM_GAIN_ENABLE"] in FULL_FRAME:
-            print("Received ROOM GAIN ENABLED data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
+            print("<- Received ROOM GAIN ENABLED data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             room_gain_var.set(hex2room_gain_state(FULL_FRAME))
             refresh_conditional_widgets()
         elif SVS_PARAMS["ROOM_GAIN_FREQ"] in FULL_FRAME:
-            print("Received ROOM GAIN FREQUENCY data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
+            print("<- Received ROOM GAIN FREQUENCY data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             room_gain_slider.set(hex2room_gain_freq(FULL_FRAME))
         elif SVS_PARAMS["ROOM_GAIN_SLOPE"] in FULL_FRAME:
-            print("Received ROOM GAIN SLOPE data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
+            print("<- Received ROOM GAIN SLOPE data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             room_gain_slope_combo.current(hex2room_gain_slope_combo_position(FULL_FRAME))
         elif SVS_PARAMS["ROOM_GAIN_ALL_SETTINGS"] in FULL_FRAME:
-            print("Received ROOM GAIN FULL SETTINGS data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
+            print("<- Received ROOM GAIN FULL SETTINGS data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             room_gain_slider.set(hex2room_gain_freq(FULL_FRAME))
             room_gain_slope_combo.current(hex2room_gain_slope_combo_position(FULL_FRAME))
             room_gain_var.set(hex2room_gain_state(FULL_FRAME))
             refresh_conditional_widgets()
+        elif b'\xaa\xf2\x00\x17\x00\x84\x10\x00\x20\x04\x00\x00\x00\x04\x00\x02\x00\x14\x00\x00\x00\x2d\xff' == FULL_FRAME:
+            print("<- Received PING")
+        elif b'\xaa\xf2\x00\x17\x00\xc4\x00\x00\x20\x04\x00\x00\x00\x04\x00\x02\x00\x14\x00\x00\x00\x8f\x3d' == FULL_FRAME:
+            print("<- Received PONG")
         else:
-            print("Received unknown data (Handle %s): %s" % (hex(handle), hexlify(FULL_FRAME)))
+            print("<- Received unknown data (Handle %s): %s" % (hex(handle), hexlify(FULL_FRAME)))
     else:
         crc_error = True
 
@@ -194,7 +196,7 @@ def gatt_rx_thread():
 def svs(command, param, data=b'\x00'):
     frame = SVS_COMMANDS[command] + SVS_PARAMS[param] + data
     frame = frame + checksum_calc(frame)
-    print(command + " " + param + " " + str(hexlify(data)))
+    print("-> " + command + " " + param + " " + str(hexlify(data)))
     device.char_write(CHAR12, frame)
     
 ##############   End Gatt Routines    ######################
@@ -255,7 +257,7 @@ def lfe_opt_changed():
 def update_lpfilter_freq(self):
     if not lfe_var.get():
     #as this callback is called when the click is released, be sure only to send svs set only if lfe = off
-        svs("SET","LOW_PASS_FILTER",lp_freq2hex(lpfilter_slider.get()))
+        svs("SET","LOW_PASS_FILTER_FREQ",lp_freq2hex(lpfilter_slider.get()))
 
 def update_lpfilter_slope(self):
     svs("SET","LOW_PASS_FILTER_SLOPE",lpfilter_slope2hex(lpfilter_slope_combo.current()))
@@ -400,7 +402,7 @@ def hex2room_gain_freq(data):
         freq_abs = 16*16*16*16*data[20] + 16*16*data[19] + data[18]
     else:
         freq_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
-    if freq_abs in ROOM_GAIN_FREQ_VALUES:
+    if freq_abs / STEP_ROOM_GAIN_FREQ in ROOM_GAIN_FREQ_LIMITS:
         freq = freq_abs / STEP_ROOM_GAIN_FREQ
     else:
         print("Unrecognized room gain frequency values received")
@@ -429,12 +431,13 @@ adapter = pygatt.GATTToolBackend()
 try:
     window = Tk()
     window.protocol("WM_DELETE_WINDOW", on_closing)
-    window.title("SVS Subwoofer Control")
+    window.title("pySVS v1.0 - SVS Subwoofer Control")
     window.geometry('550x400')
     window.resizable(False, False)
     style= ttk.Style()
     style.map("TCombobox", fieldbackground=[("readonly", "white"),("disabled", "gray") ])
     window.columnconfigure(16, weight=1)
+    window.rowconfigure(16, weight=1)
 
     vol_slider = Scale(window, from_=VOL_LIMITS[0], to=VOL_LIMITS[1], label = "Volume (dB)", orient=HORIZONTAL, resolution=1, length=200)
     vol_slider.grid(column=4, row=3, padx = 20, pady = 15)
@@ -463,6 +466,15 @@ try:
     room_gain_var = BooleanVar(value=True)
     room_gain_checkbox = ttk.Checkbutton(variable = room_gain_var, command=room_gain_opt_changed)
     room_gain_checkbox.grid(sticky="W", column=6, row=9)
+
+    try:
+        subwoofer = Image.open(requests.get("https://i.imgur.com/qX85CCG.jpg", stream=True).raw)
+        subwoofer = subwoofer.resize((200, 200), Image.ANTIALIAS)
+        subwoofer = ImageTk.PhotoImage(subwoofer)
+        picframe = Label(window, image = subwoofer)
+        picframe.grid(sticky="N", column=5, row=0, columnspan=9, rowspan=9)
+    except:
+        pass
 
     adapter.start(reset_on_start=False)
     device = adapter.connect(SVS_MAC_ADDRESS)
