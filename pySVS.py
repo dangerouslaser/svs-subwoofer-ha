@@ -6,6 +6,7 @@ from tkinter import ttk
 from PIL import ImageTk, Image
 import time
 from threading import *
+import requests
 
 #EDIT THIS VALUE#####################
 SVS_MAC_ADDRESS = "12:34:56:78:9A:BC"
