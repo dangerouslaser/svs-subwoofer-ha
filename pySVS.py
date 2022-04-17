@@ -403,7 +403,6 @@ def hex2lpfilter_slope_combo_position(data):
     if str(6*int(slope_abs/STEP_LP_SLOPE)) + " dB" in LP_SLOPE_LIMITS:
         slope = slope_abs / STEP_LP_SLOPE - 1
     else:
-        print(str(6*slope_abs/STEP_LP_SLOPE) + " dB")
         print("Unrecognized low pass filter slope values received")
     return int(slope)
 
