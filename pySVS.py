@@ -199,19 +199,19 @@ async def gatt_thread(address, char_uuid):
         await client.start_notify(char_uuid, notification_handler)
 
         #ask subwoofer for config
-        await client.write_gatt_char(CHAR12, svs("ASK", "VOLUME"))
+        await client.write_gatt_char(char_uuid, svs("ASK", "VOLUME"))
         await asyncio.sleep(0.1)
-        await client.write_gatt_char(CHAR12, svs("ASK", "PHASE"))
+        await client.write_gatt_char(char_uuid, svs("ASK", "PHASE"))
         await asyncio.sleep(0,1)
-        await client.write_gatt_char(CHAR12, svs("ASK", "LOW_PASS_FILTER_ALL_SETTINGS"))
+        await client.write_gatt_char(char_uuid, svs("ASK", "LOW_PASS_FILTER_ALL_SETTINGS"))
         await asyncio.sleep(0,1)
-        await client.write_gatt_char(CHAR12, svs("ASK", "ROOM_GAIN_ALL_SETTINGS"))
+        await client.write_gatt_char(char_uuid, svs("ASK", "ROOM_GAIN_ALL_SETTINGS"))
         await asyncio.sleep(0,1)
 
         while RUN_THREAD:
         #don't let this method die in order to RX continuosly
              if len(TX.BUFFER) > 0: 
-                 await client.write_gatt_char(CHAR12, TX.BUFFER)
+                 await client.write_gatt_char(char_uuid, TX.BUFFER)
                  TX.BUFFER = ""
              await asyncio.sleep(2.0)
         print("Bleak Client Thread closed")
