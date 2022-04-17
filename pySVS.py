@@ -297,7 +297,7 @@ def update_room_gain_freq(self):
     #as this callback is called when the click is released, be sure only to send svs set only if room_gain = on
         TX.BUFFER = svs("SET","ROOM_GAIN_FREQ", room_gain_freq2hex(room_gain_slider.get()))
 
-async def update_room_gain_slope(self):
+def update_room_gain_slope(self):
     TX.BUFFER = svs("SET","ROOM_GAIN_SLOPE", room_gain_slope2hex(room_gain_slope_combo.current()))
 
 def make_discrete_slider(value):
