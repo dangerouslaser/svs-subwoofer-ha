@@ -1,5 +1,5 @@
 #!/usr/bin/python3 
-import pygatt
+
 from binascii import hexlify
 from tkinter import * 
 from tkinter import ttk
@@ -7,6 +7,11 @@ from PIL import ImageTk, Image
 import time
 from threading import *
 import requests
+import sys
+import asyncio
+import platform
+from bleak import BleakClient
+
 
 #EDIT THIS VALUE#####################
 SVS_MAC_ADDRESS = "12:34:56:78:9A:BC"
@@ -92,25 +97,28 @@ SVS_PARAMS = 	{
 		}
 ##############   End SB-1000-PRO CONFIG    #############################
 
+##############    Bleak Routines    ######################
+ADDRESS = (
+    SVS_MAC_ADDRESS
+    if platform.system() != "Darwin"
+    else "B9EA5233-37EF-4DD6-87A8-2A875E821C46"
+)
 
-##############    Gatt Routines    ######################
 PARTIAL_FRAME=b''
 crc_error = False
-def handle_data(handle, value):
+def notification_handler(handle, data):
     #Everything that the svs subwoofer sends to us comes to this callback
-    #handle -- integer, characteristic read handle the data was received on
-    #value -- bytearray, the data returned in the notification
     global PARTIAL_FRAME
     global crc_error
-    if value[0] == 170: #0xAA
+    if data[0] == 0xAA:
     #detected a frame start. Start building frame
         if crc_error == True:
         #crc_error was not reset before, print crc error and show PREVIOUS wrong frame
             print("Data with CRC missmatch received: " + hexlify(PARTIAL_FRAME))
-        PARTIAL_FRAME = value
+        PARTIAL_FRAME = data
     else:
     #detected a frame fragment. Add it to the previous partial frame
-        PARTIAL_FRAME = PARTIAL_FRAME + value
+        PARTIAL_FRAME = PARTIAL_FRAME + data
 
     if checksum_calc(PARTIAL_FRAME[:len(PARTIAL_FRAME)-2]) == PARTIAL_FRAME[len(PARTIAL_FRAME)-2:]:
         crc_error = False
@@ -151,6 +159,7 @@ def handle_data(handle, value):
             print("<- Received ROOM GAIN FULL SETTINGS data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             room_gain_slider.set(hex2room_gain_freq(FULL_FRAME))
             room_gain_slope_combo.current(hex2room_gain_slope_combo_position(FULL_FRAME))
+            #room_gain_slope_combo.current(0)
             room_gain_var.set(hex2room_gain_state(FULL_FRAME))
             refresh_conditional_widgets()
         elif b'\xaa\xf2\x00\x17\x00\x84\x10\x00\x20\x04\x00\x00\x00\x04\x00\x02\x00\x14\x00\x00\x00\x2d\xff' == FULL_FRAME:
@@ -164,43 +173,59 @@ def handle_data(handle, value):
 
 def threading():
     # Call function
-    t1=Thread(target=gatt_rx_thread)
+    t1=Thread(target=bleak_device)
     t1.start()
 
+def bleak_device():
+    asyncio.run(
+        gatt_thread(
+            sys.argv[1] if len(sys.argv) > 1 else ADDRESS,
+            sys.argv[2] if len(sys.argv) > 2 else CHAR12,
+        )
+    )
+
 RUN_THREAD = True
-def gatt_rx_thread():
-    print("GATT RX Thread Started")
+async def gatt_thread(address, char_uuid):
+    async with BleakClient(address) as client:
+        print(f"Connected: {client.is_connected}")
 
-    #Enable notificactions on all 0x2902 uuids
-    device.char_write_handle(0x09, bytearray([100]))
-    device.char_write_handle(0x12, bytearray([100]))
-    device.char_write_handle(0x18, bytearray([100]))
-    device.char_write_handle(0x1c, bytearray([100]))
-    device.char_write_handle(0x1f, bytearray([100]))
-    device.char_write_handle(0x22, bytearray([100]))
-    device.char_write_handle(0x25, bytearray([100]))
+        #print services
+        svcs = await client.get_services()
+        for service in svcs:
+            print(service)
+        print("\n\n")
 
-    #subscribe to svs paramerters characteristic
-    device.subscribe(CHAR12, callback=handle_data)
+        #subscribe to svs parameters characteristic
+        await client.start_notify(char_uuid, notification_handler)
 
-    #ask subwoofer for config
-    svs("ASK", "VOLUME")
-    svs("ASK", "PHASE")
-    svs("ASK", "LOW_PASS_FILTER_ALL_SETTINGS")
-    svs("ASK", "ROOM_GAIN_ALL_SETTINGS")
+        #ask subwoofer for config
+        await client.write_gatt_char(CHAR12, svs("ASK", "VOLUME"))
+        await asyncio.sleep(0.1)
+        await client.write_gatt_char(CHAR12, svs("ASK", "PHASE"))
+        await asyncio.sleep(0,1)
+        await client.write_gatt_char(CHAR12, svs("ASK", "LOW_PASS_FILTER_ALL_SETTINGS"))
+        await asyncio.sleep(0,1)
+        await client.write_gatt_char(CHAR12, svs("ASK", "ROOM_GAIN_ALL_SETTINGS"))
+        await asyncio.sleep(0,1)
 
-    while RUN_THREAD:
-    #don't let this method die in order to RX continuosly
-        time.sleep(10)
-    print("GATT RX Thread Closed")
+        while RUN_THREAD:
+        #don't let this method die in order to RX continuosly
+             if len(TX.BUFFER) > 0: 
+                 await client.write_gatt_char(CHAR12, TX.BUFFER)
+                 TX.BUFFER = ""
+             await asyncio.sleep(2.0)
+        print("Bleak Client Thread closed")
 
 def svs(command, param, data=b'\x00'):
-    frame = SVS_COMMANDS[command] + SVS_PARAMS[param] + data
-    frame = frame + checksum_calc(frame)
-    print("-> " + command + " " + param + " " + str(hexlify(data)))
-    device.char_write(CHAR12, frame)
+   frame = SVS_COMMANDS[command] + SVS_PARAMS[param] + data
+   frame = frame + checksum_calc(frame)
+   print("-> " + command + " " + param + " " + str(hexlify(data)))
+   return frame
+
+class TX:
+    BUFFER = ""
     
-##############   End Gatt Routines    ######################
+##############   End Bleak Routines    ######################
 
 ##############    CRC16 XMODEM Routines    ######################
 def checksum_calc(in_data):
@@ -246,34 +271,34 @@ def crcb(*i):
 ###############   GUI Routines   ######################
 
 def update_vol(self):
-    svs("SET","VOLUME",volume2hex(vol_slider.get()))
+    TX.BUFFER = svs("SET","VOLUME",volume2hex(vol_slider.get()))
 
 def update_phase(self):
-    svs("SET","PHASE",phase2hex(phase_slider.get()))
+    TX.BUFFER = svs("SET","PHASE",phase2hex(phase_slider.get()))
 
 def lfe_opt_changed():
     refresh_conditional_widgets()
-    svs("SET","LFE",lfe_state2hex(lfe_var.get()))
+    TX.BUFFER = svs("SET","LFE",lfe_state2hex(lfe_var.get()))
 
 def update_lpfilter_freq(self):
     if not lfe_var.get():
     #as this callback is called when the click is released, be sure only to send svs set only if lfe = off
-        svs("SET","LOW_PASS_FILTER_FREQ",lp_freq2hex(lpfilter_slider.get()))
+        TX.BUFFER = svs("SET","LOW_PASS_FILTER_FREQ",lp_freq2hex(lpfilter_slider.get()))
 
 def update_lpfilter_slope(self):
-    svs("SET","LOW_PASS_FILTER_SLOPE",lpfilter_slope2hex(lpfilter_slope_combo.current()))
+    TX.BUFFER = svs("SET","LOW_PASS_FILTER_SLOPE",lpfilter_slope2hex(lpfilter_slope_combo.current()))
 
 def room_gain_opt_changed():
     refresh_conditional_widgets()
-    svs("SET","ROOM_GAIN_ENABLE", room_gain_state2hex(room_gain_var.get()))
+    TX.BUFFER = svs("SET","ROOM_GAIN_ENABLE", room_gain_state2hex(room_gain_var.get()))
 
 def update_room_gain_freq(self):
     if room_gain_var.get():
     #as this callback is called when the click is released, be sure only to send svs set only if room_gain = on
-        svs("SET","ROOM_GAIN_FREQ", room_gain_freq2hex(room_gain_slider.get()))
+        TX.BUFFER = svs("SET","ROOM_GAIN_FREQ", room_gain_freq2hex(room_gain_slider.get()))
 
-def update_room_gain_slope(self):
-    svs("SET","ROOM_GAIN_SLOPE", room_gain_slope2hex(room_gain_slope_combo.current()))
+async def update_room_gain_slope(self):
+    TX.BUFFER = svs("SET","ROOM_GAIN_SLOPE", room_gain_slope2hex(room_gain_slope_combo.current()))
 
 def make_discrete_slider(value):
     new_value = min(ROOM_GAIN_FREQ_LIMITS, key=lambda x:abs(x-float(value)))
@@ -303,7 +328,6 @@ def on_closing():
     print("Exiting...")
     global RUN_THREAD
     RUN_THREAD = False
-    adapter.stop()
     window.destroy()
     quit()
 ###########   End GUI Routines   ###################
@@ -428,65 +452,58 @@ def hex2room_gain_slope_combo_position(data):
 ###########   End AUX Routines   ###################
 
 ###############   main()   ##########################
-adapter = pygatt.GATTToolBackend()
-try:
-    window = Tk()
-    window.protocol("WM_DELETE_WINDOW", on_closing)
-    window.title("pySVS v1.0 - SVS Subwoofer Control")
-    window.geometry('550x400')
-    window.resizable(False, False)
-    style= ttk.Style()
-    style.map("TCombobox", fieldbackground=[("readonly", "white"),("disabled", "gray") ])
-    window.columnconfigure(16, weight=1)
-    window.rowconfigure(16, weight=1)
 
-    vol_slider = Scale(window, from_=VOL_LIMITS[0], to=VOL_LIMITS[1], label = "Volume (dB)", orient=HORIZONTAL, resolution=1, length=200)
-    vol_slider.grid(column=4, row=3, padx = 20, pady = 15)
-    vol_slider.bind("<ButtonRelease-1>", update_vol)
-
-    phase_slider = Scale(window, from_=PHASE_LIMITS[0], to=PHASE_LIMITS[1], label = "Phase (°)", orient=HORIZONTAL, resolution=1, length=200)
-    phase_slider.grid(column=4, row=5, padx = 20, pady = 15)
-    phase_slider.bind("<ButtonRelease-1>", update_phase)
-
-    lpfilter_slider = Scale(window, from_=LP_FREQ_LIMITS[0], to=LP_FREQ_LIMITS[1], label = "Low Pass Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200)
-    lpfilter_slider.grid(column=4, row=7, padx = 20, pady = 15)
-    lpfilter_slider.bind("<ButtonRelease-1>", update_lpfilter_freq)
-    lpfilter_slope_combo=ttk.Combobox(window,values=LP_SLOPE_LIMITS,width=7,state='readonly')
-    lpfilter_slope_combo.grid(column=5, row=7)
-    lpfilter_slope_combo.bind("<<ComboboxSelected>>", update_lpfilter_slope)
-    lfe_var = BooleanVar(value=False)
-    lfe_checkbox = ttk.Checkbutton(variable=lfe_var, command=lfe_opt_changed)
-    lfe_checkbox.grid(sticky="W", column=6, row=7)
-
-    room_gain_slider = Scale(window, from_=min(ROOM_GAIN_FREQ_LIMITS), to=max(ROOM_GAIN_FREQ_LIMITS), label = "Room Gain Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200, command=make_discrete_slider)
-    room_gain_slider.bind("<ButtonRelease-1>", update_room_gain_freq)
-    room_gain_slider.grid(column=4, row=9, padx = 20, pady = 15)
-    room_gain_slope_combo=ttk.Combobox(window,values=ROOM_GAIN_SLOPE_LIMITS,width=7,state='readonly')
-    room_gain_slope_combo.grid(column=5, row=9)
-    room_gain_slope_combo.bind("<<ComboboxSelected>>", update_room_gain_slope)
-    room_gain_var = BooleanVar(value=True)
-    room_gain_checkbox = ttk.Checkbutton(variable = room_gain_var, command=room_gain_opt_changed)
-    room_gain_checkbox.grid(sticky="W", column=6, row=9)
-
+if __name__ == "__main__":
     try:
-        subwoofer = Image.open(requests.get("https://i.imgur.com/qX85CCG.jpg", stream=True).raw)
-        subwoofer = subwoofer.resize((200, 200), Image.ANTIALIAS)
-        subwoofer = ImageTk.PhotoImage(subwoofer)
-        picframe = Label(window, image = subwoofer)
-        picframe.grid(sticky="N", column=5, row=0, columnspan=9, rowspan=9)
-    except:
-        pass
+        window = Tk()
+        window.protocol("WM_DELETE_WINDOW", on_closing)
+        window.title("pySVS v.ALPHA - SVS Subwoofer Control")
+        window.geometry('550x400')
+        window.resizable(False, False)
+        style= ttk.Style()
+        style.map("TCombobox", fieldbackground=[("readonly", "white"),("disabled", "gray") ])
+        window.columnconfigure(16, weight=1)
+        window.rowconfigure(16, weight=1)
 
-    adapter.start(reset_on_start=False)
-    device = adapter.connect(SVS_MAC_ADDRESS)
-    for key in device.discover_characteristics().keys():
-        print(key)
-    print("\n\n")
-    threading()
-    window.mainloop()
+        vol_slider = Scale(window, from_=VOL_LIMITS[0], to=VOL_LIMITS[1], label = "Volume (dB)", orient=HORIZONTAL, resolution=1, length=200)
+        vol_slider.grid(column=4, row=3, padx = 20, pady = 15)
+        vol_slider.bind("<ButtonRelease-1>", update_vol)
+
+        phase_slider = Scale(window, from_=PHASE_LIMITS[0], to=PHASE_LIMITS[1], label = "Phase (°)", orient=HORIZONTAL, resolution=1, length=200)
+        phase_slider.grid(column=4, row=5, padx = 20, pady = 15)
+        phase_slider.bind("<ButtonRelease-1>", update_phase)
+
+        lpfilter_slider = Scale(window, from_=LP_FREQ_LIMITS[0], to=LP_FREQ_LIMITS[1], label = "Low Pass Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200)
+        lpfilter_slider.grid(column=4, row=7, padx = 20, pady = 15)
+        lpfilter_slider.bind("<ButtonRelease-1>", update_lpfilter_freq)
+        lpfilter_slope_combo=ttk.Combobox(window,values=LP_SLOPE_LIMITS,width=7,state='readonly')
+        lpfilter_slope_combo.grid(column=5, row=7)
+        lpfilter_slope_combo.bind("<<ComboboxSelected>>", update_lpfilter_slope)
+        lfe_var = BooleanVar(value=False)
+        lfe_checkbox = ttk.Checkbutton(variable=lfe_var, command=lfe_opt_changed)
+        lfe_checkbox.grid(sticky="W", column=6, row=7)
+
+        room_gain_slider = Scale(window, from_=min(ROOM_GAIN_FREQ_LIMITS), to=max(ROOM_GAIN_FREQ_LIMITS), label = "Room Gain Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200, command=make_discrete_slider)
+        room_gain_slider.bind("<ButtonRelease-1>", update_room_gain_freq)
+        room_gain_slider.grid(column=4, row=9, padx = 20, pady = 15)
+        room_gain_slope_combo=ttk.Combobox(window,values=ROOM_GAIN_SLOPE_LIMITS,width=7,state='readonly')
+        room_gain_slope_combo.grid(column=5, row=9)
+        room_gain_slope_combo.bind("<<ComboboxSelected>>", update_room_gain_slope)
+        room_gain_var = BooleanVar(value=True)
+        room_gain_checkbox = ttk.Checkbutton(variable = room_gain_var, command=room_gain_opt_changed)
+        room_gain_checkbox.grid(sticky="W", column=6, row=9)
+
+        try:
+            subwoofer = Image.open(requests.get("https://i.imgur.com/qX85CCG.jpg", stream=True).raw)
+            subwoofer = subwoofer.resize((200, 200), Image.ANTIALIAS)
+            subwoofer = ImageTk.PhotoImage(subwoofer)
+            picframe = Label(window, image = subwoofer)
+            picframe.grid(sticky="N", column=5, row=0, columnspan=9, rowspan=9)
+        except:
+            pass
+
+        threading()
+        window.mainloop()
 	
-except Exception as e:
-    print(e)
-
-finally:
-    adapter.stop()
+    except Exception as e:
+        print(e)
