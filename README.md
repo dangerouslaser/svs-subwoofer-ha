@@ -9,4 +9,4 @@ pip3 install bleak
 
 Before running the program, be sure to edit the pySVS.py file and enter the mac address of your SVS Subwoofer.
 
-I only own a SB-1000PRO to test, so the rest of SVS Subwoofers could or couldn't work, I don't know. Working on both Linux and Windows (version >= fall creators update).
+I only own a SB-1000PRO to test, so the rest of SVS Subwoofers could or couldn't work, I don't know. Tested on both Linux and Windows (version >= fall creators update).
