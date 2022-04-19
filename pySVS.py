@@ -133,7 +133,6 @@ def notification_handler(handle, data):
             print("<- Received ROOM GAIN FULL SETTINGS data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             room_gain_slider.set(hex2room_gain_freq(FULL_FRAME))
             room_gain_slope_combo.current(hex2room_gain_slope_combo_position(FULL_FRAME))
-            #room_gain_slope_combo.current(0)
             room_gain_var.set(hex2room_gain_state(FULL_FRAME))
             refresh_conditional_widgets()
         elif b'\xaa\xf2\x00\x17\x00\x84\x10\x00\x20\x04\x00\x00\x00\x04\x00\x02\x00\x14\x00\x00\x00\x2d\xff' == FULL_FRAME:
