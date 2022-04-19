@@ -20,31 +20,15 @@ SVS_MAC_ADDRESS = "12:34:56:78:9A:BC"
 
 ################    SB-1000-PRO CONFIG    #########################################
 STEP = 2560
-
 VOL_LIMITS = [-60,0]
-MIN_VOL = 0x1000000 + STEP * VOL_LIMITS[0]
-MAX_VOL = 0x1000000 + STEP * VOL_LIMITS[1]
-
+VOL_REF = 0x1000000
 PHASE_LIMITS = [0, 180]
-MIN_PHASE = STEP * PHASE_LIMITS[0]
-MAX_PHASE = STEP * PHASE_LIMITS[1]
-
-LFE_ON = 0
-LFE_OFF = STEP
-
+LFE_LIMITS = [0, STEP] #discrete, [ON, OFF]
 LP_FREQ_LIMITS = [30, 200]
-MIN_LP_FREQ = STEP * LP_FREQ_LIMITS[0]
-MAX_LP_FREQ = STEP * LP_FREQ_LIMITS[1]
-
 LP_SLOPE_LIMITS = ["6 dB", "12 dB", "18 dB", "24 dB"] #discrete values. Add units to show in the associated combo
-
-ROOM_GAIN_ON = STEP
-ROOM_GAIN_OFF = 0
-
+ROOM_GAIN_LIMITS = [STEP, 0] #discrete, [ON, OFF]
 ROOM_GAIN_FREQ_LIMITS = [25, 31, 40] #discrete values
-
 ROOM_GAIN_SLOPE_LIMITS = ["6 dB", "12 dB"] #discrete values. Add units to show in the associated combo
-
 
 SERV01 = "0000fef6-0000-1000-8000-00805f9b34fb"
 CHAR01 = "005f0005-2ff2-4ed5-b045-4c7463617865"
@@ -62,6 +46,8 @@ CHAR22 = "00002a25-0000-1000-8000-00805f9b34fb"
 
 SERV04 = "00001801-0000-1000-8000-00805f9b34fb"
 CHAR31 = "00002a05-0000-1000-8000-00805f9b34fb"
+
+CHARACTERISTIC_UUID = CHAR12
 
 SVS_COMMANDS = 	{
 		"SET": b'\xaa\xf0\x1f\x11\x00', 
@@ -168,7 +154,7 @@ def bleak_device():
     asyncio.run(
         gatt_thread(
             sys.argv[1] if len(sys.argv) > 1 else ADDRESS,
-            sys.argv[2] if len(sys.argv) > 2 else CHAR12,
+            sys.argv[2] if len(sys.argv) > 2 else CHARACTERISTIC_UUID,
         )
     )
 
@@ -202,7 +188,7 @@ async def gatt_thread(address, char_uuid):
              if len(TX.BUFFER) > 0: 
                  await client.write_gatt_char(char_uuid, TX.BUFFER)
                  TX.BUFFER = ""
-             await asyncio.sleep(2.0)
+             await asyncio.sleep(0.2)
         print("Bleak Client Thread closed")
 
 def svs(command, param, data=b'\x00'):
@@ -327,13 +313,13 @@ def volume2hex(level):
         #Max volume (level 0) provocates a 4 byte hex value in the std calc (0x10 0x00 0x00 0x00). Svs reads only the 3 last bytes. So max level = 0x00 0x00 0x00 
         volhex = level.to_bytes(3, 'little')
     else:
-        volhex = (MIN_VOL + STEP*(level - VOL_LIMITS[0])).to_bytes(3, 'little')
+        volhex = (VOL_REF + STEP * level).to_bytes(3, 'little')
     return volhex
 
 def hex2volume_slider_position(data):
     vol_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
-    if vol_abs >= MIN_VOL and vol_abs <= MAX_VOL:
-        vol = ((vol_abs - MIN_VOL)/STEP) + VOL_LIMITS[0]
+    if (vol_abs - VOL_REF)/STEP in range(VOL_LIMITS[0], VOL_LIMITS[1]):
+        vol = (vol_abs - VOL_REF)/STEP
     elif vol_abs == 0:
         vol = VOL_LIMITS[1]
     else:
@@ -346,19 +332,19 @@ def phase2hex(level):
 
 def hex2phase_slider_position(data):
     phase_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
-    if phase_abs >= MIN_PHASE and phase_abs <= MAX_PHASE:
+    if phase_abs/STEP in range(PHASE_LIMITS[0],PHASE_LIMITS[1] + 1):
         phase = phase_abs/STEP
     else:
         print("Unrecognized phase values received")
     return phase
 
 def lfe_state2hex(value):
-    lfe_opt_hex = (int(not(value)) * LFE_OFF).to_bytes(3, 'little')
+    lfe_opt_hex = (int(not(value)) * LFE_LIMITS[1]).to_bytes(3, 'little')
     return lfe_opt_hex
 
 def hex2lfe_state(data):
     lfe_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
-    if lfe_abs == LFE_ON or lfe_abs == LFE_OFF:
+    if lfe_abs in LFE_LIMITS:
         lfe = not(bool(lfe_abs))
     else:
         print("Unrecognized LFE option value received")
@@ -373,7 +359,7 @@ def hex2lpfilter_slider_position(data):
         lpfreq_abs = 16*16*16*16*data[20] + 16*16*data[19] + data[18]
     else:
         lpfreq_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
-    if lpfreq_abs >= MIN_LP_FREQ and lpfreq_abs <= MAX_LP_FREQ:
+    if lpfreq_abs/STEP in range(LP_FREQ_LIMITS[0], LP_FREQ_LIMITS[1] + 1):
         freq = lpfreq_abs / STEP
     else:
         print("Unrecognized Low Pass Filter Frequency values received")
@@ -395,12 +381,12 @@ def hex2lpfilter_slope_combo_position(data):
     return slope
 
 def room_gain_state2hex(value):
-    room_gain_opt_hex = (int(value) * ROOM_GAIN_ON).to_bytes(3, 'little')
+    room_gain_opt_hex = (int(value) * ROOM_GAIN_LIMITS[0]).to_bytes(3, 'little')
     return room_gain_opt_hex
 
 def hex2room_gain_state(data):
     room_gain_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
-    if room_gain_abs == ROOM_GAIN_ON or room_gain_abs == ROOM_GAIN_OFF:
+    if room_gain_abs in ROOM_GAIN_LIMITS:
         room_gain = bool(room_gain_abs)
     else:
         print("Unrecognized room gain option value received")
@@ -445,7 +431,7 @@ if __name__ == "__main__":
     try:
         window = Tk()
         window.protocol("WM_DELETE_WINDOW", on_closing)
-        window.title("pySVS v.ALPHA - SVS Subwoofer Control")
+        window.title("pySVS v.2.2 Beta - SVS Subwoofer Control")
         window.geometry('550x400')
         window.resizable(False, False)
         style= ttk.Style()
@@ -483,7 +469,7 @@ if __name__ == "__main__":
 
         try:
             subwoofer = Image.open(requests.get("https://i.imgur.com/qX85CCG.jpg", stream=True).raw)
-            subwoofer = subwoofer.resize((200, 200), Image.ANTIALIAS)
+            subwoofer = subwoofer.resize((200, 200), Image.Resampling.LANCZOS)
             subwoofer = ImageTk.PhotoImage(subwoofer)
             picframe = Label(window, image = subwoofer)
             picframe.grid(sticky="N", column=5, row=0, columnspan=9, rowspan=9)
