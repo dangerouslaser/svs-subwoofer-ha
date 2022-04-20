@@ -245,34 +245,34 @@ def crcb(*i):
 ###############   GUI Routines   ######################
 
 def update_vol(self):
-    TX.BUFFER = svs("SET","VOLUME",data2hex(vol_slider.get() + VOL_REF))
+    TX.BUFFER = svs("SET","VOLUME",data2hex(vol_slider.get(), VOL_REF))
 
 def update_phase(self):
-    TX.BUFFER = svs("SET","PHASE",data2hex(phase_slider.get()))
+    TX.BUFFER = svs("SET","PHASE",data2hex(phase_slider.get(), 0))
 
 def lfe_opt_changed():
     refresh_conditional_widgets()
-    TX.BUFFER = svs("SET","LFE",data2hex(not(lfe_var.get())))
+    TX.BUFFER = svs("SET","LFE",data2hex(not(lfe_var.get()), 0))
 
 def update_lpfilter_freq(self):
     if not lfe_var.get():
     #as this callback is called when the click is released, be sure only to send svs set only if lfe = off
-        TX.BUFFER = svs("SET","LOW_PASS_FILTER_FREQ",data2hex(lpfilter_slider.get()))
+        TX.BUFFER = svs("SET","LOW_PASS_FILTER_FREQ",data2hex(lpfilter_slider.get(), 0))
 
 def update_lpfilter_slope(self):
-    TX.BUFFER = svs("SET","LOW_PASS_FILTER_SLOPE",data2hex(LP_SLOPE_LIMITS[lpfilter_slope_combo.current()]))
+    TX.BUFFER = svs("SET","LOW_PASS_FILTER_SLOPE",data2hex(LP_SLOPE_LIMITS[lpfilter_slope_combo.current()], 0))
 
 def room_gain_opt_changed():
     refresh_conditional_widgets()
-    TX.BUFFER = svs("SET","ROOM_GAIN_ENABLE", data2hex(room_gain_var.get()))
+    TX.BUFFER = svs("SET","ROOM_GAIN_ENABLE", data2hex(room_gain_var.get(), 0))
 
 def update_room_gain_freq(self):
     if room_gain_var.get():
     #as this callback is called when the click is released, be sure only to send svs set only if room_gain = on
-        TX.BUFFER = svs("SET","ROOM_GAIN_FREQ", data2hex(room_gain_slider.get()))
+        TX.BUFFER = svs("SET","ROOM_GAIN_FREQ", data2hex(room_gain_slider.get(), 0))
 
 def update_room_gain_slope(self):
-    TX.BUFFER = svs("SET","ROOM_GAIN_SLOPE", data2hex(ROOM_GAIN_SLOPE_LIMITS[room_gain_slope_combo.current()]))
+    TX.BUFFER = svs("SET","ROOM_GAIN_SLOPE", data2hex(ROOM_GAIN_SLOPE_LIMITS[room_gain_slope_combo.current()], 0))
 
 def make_discrete_slider(value):
     new_value = min(ROOM_GAIN_FREQ_LIMITS, key=lambda x:abs(x-float(value)))
@@ -307,8 +307,8 @@ def on_closing():
 ###########   End GUI Routines   ###################
 
 ###########   AUX Routines   ###################
-def data2hex(level):
-    value_hex = (STEP*int(level)).to_bytes(4, 'little')
+def data2hex(level, reference):
+    value_hex = (STEP*int(level) + reference).to_bytes(4, 'little')
     return value_hex[:3]
 
 def hex2volume_slider_position(data):
