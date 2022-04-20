@@ -25,10 +25,10 @@ VOL_REF = 0x1000000
 PHASE_LIMITS = [0, 180]
 LFE_LIMITS = [0, STEP] #discrete, [ON, OFF]
 LP_FREQ_LIMITS = [30, 200]
-LP_SLOPE_LIMITS = ["6 dB", "12 dB", "18 dB", "24 dB"] #discrete values. Add units to show in the associated combo
+LP_SLOPE_LIMITS = [6, 12, 18, 24] #discrete values
 ROOM_GAIN_LIMITS = [STEP, 0] #discrete, [ON, OFF]
 ROOM_GAIN_FREQ_LIMITS = [25, 31, 40] #discrete values
-ROOM_GAIN_SLOPE_LIMITS = ["6 dB", "12 dB"] #discrete values. Add units to show in the associated combo
+ROOM_GAIN_SLOPE_LIMITS = [6, 12] #discrete values
 
 SERV01 = "0000fef6-0000-1000-8000-00805f9b34fb"
 CHAR01 = "005f0005-2ff2-4ed5-b045-4c7463617865"
@@ -104,7 +104,7 @@ def notification_handler(handle, data):
             print("<- Received PHASE data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             phase_slider.set(hex2phase_slider_position(FULL_FRAME))
         elif SVS_PARAMS["LFE"] in FULL_FRAME:
-            print("<- Received LFE data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
+            print("<- Received LFE ON/OFF data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             lfe_var.set(hex2lfe_state(FULL_FRAME))
             refresh_conditional_widgets()
         elif SVS_PARAMS["LOW_PASS_FILTER_FREQ"] in FULL_FRAME:
@@ -114,13 +114,13 @@ def notification_handler(handle, data):
             print("<- Received LOW PASS FILTER SLOPE data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             lpfilter_slope_combo.current(hex2lpfilter_slope_combo_position(FULL_FRAME))
         elif SVS_PARAMS["LOW_PASS_FILTER_ALL_SETTINGS"] in FULL_FRAME:
-            print("<- Received LOW_PASS_FILTER_FULL_SETTINGS data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
+            print("<- Received LOW PASS FILTER FULL_SETTINGS data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             lpfilter_slider.set(hex2lpfilter_slider_position(FULL_FRAME))
             lpfilter_slope_combo.current(hex2lpfilter_slope_combo_position(FULL_FRAME))
             lfe_var.set(hex2lfe_state(FULL_FRAME))
             refresh_conditional_widgets()
         elif SVS_PARAMS["ROOM_GAIN_ENABLE"] in FULL_FRAME:
-            print("<- Received ROOM GAIN ENABLED data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
+            print("<- Received ROOM GAIN ON/OFF data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
             room_gain_var.set(hex2room_gain_state(FULL_FRAME))
             refresh_conditional_widgets()
         elif SVS_PARAMS["ROOM_GAIN_FREQ"] in FULL_FRAME:
@@ -245,34 +245,34 @@ def crcb(*i):
 ###############   GUI Routines   ######################
 
 def update_vol(self):
-    TX.BUFFER = svs("SET","VOLUME",volume2hex(vol_slider.get()))
+    TX.BUFFER = svs("SET","VOLUME",data2hex(vol_slider.get(), VOL_REF))
 
 def update_phase(self):
-    TX.BUFFER = svs("SET","PHASE",phase2hex(phase_slider.get()))
+    TX.BUFFER = svs("SET","PHASE",data2hex(phase_slider.get(), 0))
 
 def lfe_opt_changed():
     refresh_conditional_widgets()
-    TX.BUFFER = svs("SET","LFE",lfe_state2hex(lfe_var.get()))
+    TX.BUFFER = svs("SET","LFE",data2hex(not(lfe_var.get()), 0))
 
 def update_lpfilter_freq(self):
     if not lfe_var.get():
     #as this callback is called when the click is released, be sure only to send svs set only if lfe = off
-        TX.BUFFER = svs("SET","LOW_PASS_FILTER_FREQ",lp_freq2hex(lpfilter_slider.get()))
+        TX.BUFFER = svs("SET","LOW_PASS_FILTER_FREQ",data2hex(lpfilter_slider.get(), 0))
 
 def update_lpfilter_slope(self):
-    TX.BUFFER = svs("SET","LOW_PASS_FILTER_SLOPE",lpfilter_slope2hex(lpfilter_slope_combo.current()))
+    TX.BUFFER = svs("SET","LOW_PASS_FILTER_SLOPE",data2hex(LP_SLOPE_LIMITS[lpfilter_slope_combo.current()], 0))
 
 def room_gain_opt_changed():
     refresh_conditional_widgets()
-    TX.BUFFER = svs("SET","ROOM_GAIN_ENABLE", room_gain_state2hex(room_gain_var.get()))
+    TX.BUFFER = svs("SET","ROOM_GAIN_ENABLE", data2hex(room_gain_var.get(), 0))
 
 def update_room_gain_freq(self):
     if room_gain_var.get():
     #as this callback is called when the click is released, be sure only to send svs set only if room_gain = on
-        TX.BUFFER = svs("SET","ROOM_GAIN_FREQ", room_gain_freq2hex(room_gain_slider.get()))
+        TX.BUFFER = svs("SET","ROOM_GAIN_FREQ", data2hex(room_gain_slider.get(), 0))
 
 def update_room_gain_slope(self):
-    TX.BUFFER = svs("SET","ROOM_GAIN_SLOPE", room_gain_slope2hex(room_gain_slope_combo.current()))
+    TX.BUFFER = svs("SET","ROOM_GAIN_SLOPE", data2hex(ROOM_GAIN_SLOPE_LIMITS[room_gain_slope_combo.current()], 0))
 
 def make_discrete_slider(value):
     new_value = min(ROOM_GAIN_FREQ_LIMITS, key=lambda x:abs(x-float(value)))
@@ -307,13 +307,9 @@ def on_closing():
 ###########   End GUI Routines   ###################
 
 ###########   AUX Routines   ###################
-def volume2hex(level):
-    if level == VOL_LIMITS[1]:
-        #Max volume (level 0) provocates a 4 byte hex value in the std calc (0x10 0x00 0x00 0x00). Svs reads only the 3 last bytes. So max level = 0x00 0x00 0x00 
-        volhex = level.to_bytes(3, 'little')
-    else:
-        volhex = (VOL_REF + STEP * level).to_bytes(3, 'little')
-    return volhex
+def data2hex(level, reference):
+    value_hex = (STEP*int(level) + reference).to_bytes(4, 'little')
+    return value_hex[:3]
 
 def hex2volume_slider_position(data):
     vol_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
@@ -325,10 +321,6 @@ def hex2volume_slider_position(data):
         print("Unrecognized volume values received")
     return vol
 
-def phase2hex(level):
-    phasehex = (STEP*level).to_bytes(3, 'little')
-    return phasehex
-
 def hex2phase_slider_position(data):
     phase_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
     if phase_abs/STEP in range(PHASE_LIMITS[0],PHASE_LIMITS[1] + 1):
@@ -337,10 +329,6 @@ def hex2phase_slider_position(data):
         print("Unrecognized phase values received")
     return phase
 
-def lfe_state2hex(value):
-    lfe_opt_hex = (int(not(value)) * LFE_LIMITS[1]).to_bytes(3, 'little')
-    return lfe_opt_hex
-
 def hex2lfe_state(data):
     lfe_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
     if lfe_abs in LFE_LIMITS:
@@ -348,10 +336,6 @@ def hex2lfe_state(data):
     else:
         print("Unrecognized LFE option value received")
     return lfe
-
-def lp_freq2hex(freq):
-    freqhex = (STEP*freq).to_bytes(3, 'little')
-    return freqhex
 
 def hex2lpfilter_slider_position(data):
     if len(data) == 35:
@@ -364,24 +348,16 @@ def hex2lpfilter_slider_position(data):
         print("Unrecognized Low Pass Filter Frequency values received")
     return int(freq)
 
-def lpfilter_slope2hex(index):
-    slopehex = (STEP * int(LP_SLOPE_LIMITS[index].replace(" dB",""))).to_bytes(3, 'little')
-    return slopehex
-
 def hex2lpfilter_slope_combo_position(data):
     if len(data) == 35:
         slope_abs = 16*16*data[21]
     else:
         slope_abs = 16*16*data[17] + data[16]
-    if str(int(slope_abs/STEP)) + " dB" in LP_SLOPE_LIMITS:
-        slope = LP_SLOPE_LIMITS.index(str(int(slope_abs/STEP)) + " dB")
+    if int(slope_abs/STEP) in LP_SLOPE_LIMITS:
+        slope = LP_SLOPE_LIMITS.index(int(slope_abs/STEP))
     else:
         print("Unrecognized low pass filter slope values received")
     return slope
-
-def room_gain_state2hex(value):
-    room_gain_opt_hex = (int(value) * ROOM_GAIN_LIMITS[0]).to_bytes(3, 'little')
-    return room_gain_opt_hex
 
 def hex2room_gain_state(data):
     room_gain_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
@@ -390,10 +366,6 @@ def hex2room_gain_state(data):
     else:
         print("Unrecognized room gain option value received")
     return room_gain
-
-def room_gain_freq2hex(freq):
-    freqhex = (freq * STEP).to_bytes(3, 'little')
-    return freqhex
 
 def hex2room_gain_freq(data):
     if len(data) == 35:
@@ -406,17 +378,13 @@ def hex2room_gain_freq(data):
         print("Unrecognized room gain frequency values received")
     return int(freq)
 
-def room_gain_slope2hex(index):
-    slopehex = (STEP*int(ROOM_GAIN_SLOPE_LIMITS[index].replace(" dB",""))).to_bytes(3, 'little')
-    return slopehex
-
 def hex2room_gain_slope_combo_position(data):
     if len(data) == 35:
         slope_abs = 16*16*data[21]
     else:
         slope_abs = 16*16*data[17] + data[16]
-    if str(int(slope_abs / STEP)) + " dB" in ROOM_GAIN_SLOPE_LIMITS:
-        slope = ROOM_GAIN_SLOPE_LIMITS.index(str(int(slope_abs / STEP)) + " dB")
+    if int(slope_abs / STEP) in ROOM_GAIN_SLOPE_LIMITS:
+        slope = ROOM_GAIN_SLOPE_LIMITS.index(int(slope_abs / STEP))
     else:
         print("Unrecognized room gain slope values received")
     return slope
@@ -449,7 +417,7 @@ if __name__ == "__main__":
         lpfilter_slider = Scale(window, from_=LP_FREQ_LIMITS[0], to=LP_FREQ_LIMITS[1], label = "Low Pass Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200)
         lpfilter_slider.grid(column=4, row=7, padx = 20, pady = 15)
         lpfilter_slider.bind("<ButtonRelease-1>", update_lpfilter_freq)
-        lpfilter_slope_combo=ttk.Combobox(window,values=LP_SLOPE_LIMITS,width=7,state='readonly')
+        lpfilter_slope_combo=ttk.Combobox(window,values=[str(i) + " dB" for i in LP_SLOPE_LIMITS],width=7,state='readonly')
         lpfilter_slope_combo.grid(column=5, row=7)
         lpfilter_slope_combo.bind("<<ComboboxSelected>>", update_lpfilter_slope)
         lfe_var = BooleanVar(value=False)
@@ -459,7 +427,7 @@ if __name__ == "__main__":
         room_gain_slider = Scale(window, from_=min(ROOM_GAIN_FREQ_LIMITS), to=max(ROOM_GAIN_FREQ_LIMITS), label = "Room Gain Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200, command=make_discrete_slider)
         room_gain_slider.bind("<ButtonRelease-1>", update_room_gain_freq)
         room_gain_slider.grid(column=4, row=9, padx = 20, pady = 15)
-        room_gain_slope_combo=ttk.Combobox(window,values=ROOM_GAIN_SLOPE_LIMITS,width=7,state='readonly')
+        room_gain_slope_combo=ttk.Combobox(window,values=[str(i) + " dB" for i in ROOM_GAIN_SLOPE_LIMITS],width=7,state='readonly')
         room_gain_slope_combo.grid(column=5, row=9)
         room_gain_slope_combo.bind("<<ComboboxSelected>>", update_room_gain_slope)
         room_gain_var = BooleanVar(value=True)
