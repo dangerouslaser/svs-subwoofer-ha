@@ -64,6 +64,7 @@ SVS_PARAMS = 	{
 		"ROOM_GAIN_ENABLE":b'\x04\x00\x00\x00\x26\x00\x02', 
 		"ROOM_GAIN_FREQ":b'\x04\x00\x00\x00\x28\x00\x02',
 		"ROOM_GAIN_SLOPE":b'\x04\x00\x00\x00\x2a\x00\x02',
+        "POWER_SETTING":b'\x04\x00\x00\x00\x04\x00\x02',
 		"PARAM_3":b'\x04\x00\x00\x00\x00\x00\x32',
 		"PARAM_4":b'\x08\x00\x00\x00\x00\x00\x08',
 		"PARAM_5": b'\x09\x00\x00\x00\x00\x00\x08',
@@ -135,10 +136,8 @@ def notification_handler(handle, data):
             room_gain_slope_combo.current(hex2room_gain_slope_combo_position(FULL_FRAME))
             room_gain_var.set(hex2room_gain_state(FULL_FRAME))
             refresh_conditional_widgets()
-        elif b'\xaa\xf2\x00\x17\x00\x84\x10\x00\x20\x04\x00\x00\x00\x04\x00\x02\x00\x14\x00\x00\x00\x2d\xff' == FULL_FRAME:
-            print("<- Received PING")
-        elif b'\xaa\xf2\x00\x17\x00\xc4\x00\x00\x20\x04\x00\x00\x00\x04\x00\x02\x00\x14\x00\x00\x00\x8f\x3d' == FULL_FRAME:
-            print("<- Received PONG")
+        elif SVS_PARAMS["POWER_SETTING"] in FULL_FRAME:
+            print("<- Received POWER SETTING data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
         else:
             print("<- Received unknown data (Handle %s): %s" % (hex(handle), hexlify(FULL_FRAME)))
     else:
