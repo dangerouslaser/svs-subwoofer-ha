@@ -325,7 +325,7 @@ def hex2data(frame):
 
         if int((val - SVS_PARAMS[sub_frame_type]["reference"])/STEP) in check:
             out.append(int((val - SVS_PARAMS[sub_frame_type]["reference"])/STEP))
-        elif (val - SVS_PARAMS[sub_frame_type]["reference"])/STEP < 0:
+        elif val == 0 and SVS_PARAMS[sub_frame_type]["reference"] > 0:
             out.append(max(check))
         else:
             print("Unrecognized {0} ({1}) values received".format(sub_frame_type, frame_type))
