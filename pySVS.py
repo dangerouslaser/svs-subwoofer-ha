@@ -5,6 +5,7 @@ from tkinter import *
 from tkinter import ttk
 from PIL import ImageTk, Image
 import time
+import traceback
 from threading import *
 import requests
 import sys
@@ -17,18 +18,8 @@ from bleak import BleakClient
 SVS_MAC_ADDRESS = "12:34:56:78:9A:BC"
 #####################################
 
-
 ################    SB-1000-PRO CONFIG    #########################################
 STEP = 2560
-VOL_LIMITS = [-60,0]
-VOL_REF = 0x1000000
-PHASE_LIMITS = [0, 180]
-LFE_LIMITS = [0, STEP] #discrete, [ON, OFF]
-LP_FREQ_LIMITS = [30, 200]
-LP_SLOPE_LIMITS = [6, 12, 18, 24] #discrete values
-ROOM_GAIN_LIMITS = [STEP, 0] #discrete, [ON, OFF]
-ROOM_GAIN_FREQ_LIMITS = [25, 31, 40] #discrete values
-ROOM_GAIN_SLOPE_LIMITS = [6, 12] #discrete values
 
 SERV01 = "0000fef6-0000-1000-8000-00805f9b34fb"
 CHAR01 = "005f0005-2ff2-4ed5-b045-4c7463617865"
@@ -54,21 +45,17 @@ SVS_COMMANDS = 	{
 		"ASK": b'\xaa\xf1\x1f\x0f\x00'
 		}
 SVS_PARAMS = 	{
-		"VOLUME":b'\x04\x00\x00\x00\x2c\x00\x02', 
-		"PHASE":b'\x04\x00\x00\x00\x2e\x00\x02',
-		"LOW_PASS_FILTER_ALL_SETTINGS":b'\x04\x00\x00\x00\x08\x00\x06',
-		"LOW_PASS_FILTER_SLOPE":b'\x04\x00\x00\x00\x0c\x00\x02',
-		"LFE":b'\x04\x00\x00\x00\x08\x00\x02',
-		"LOW_PASS_FILTER_FREQ":b'\x04\x00\x00\x00\x0a\x00\x02',
-		"ROOM_GAIN_ALL_SETTINGS":b'\x04\x00\x00\x00\x26\x00\x06',
-		"ROOM_GAIN_ENABLE":b'\x04\x00\x00\x00\x26\x00\x02', 
-		"ROOM_GAIN_FREQ":b'\x04\x00\x00\x00\x28\x00\x02',
-		"ROOM_GAIN_SLOPE":b'\x04\x00\x00\x00\x2a\x00\x02',
-        "POWER_SETTING":b'\x04\x00\x00\x00\x04\x00\x02',
-		"PARAM_3":b'\x04\x00\x00\x00\x00\x00\x32',
-		"PARAM_4":b'\x08\x00\x00\x00\x00\x00\x08',
-		"PARAM_5": b'\x09\x00\x00\x00\x00\x00\x08',
-		"PARAM_6":b'\x0a\x00\x00\x00\x00\x00\x08'
+		"VOLUME": {"bin":b'\x04\x00\x00\x00\x2c\x00\x02', "limits": [-60,0], "limits_type":0, "reference": 0x1000000},
+		"PHASE": {"bin":b'\x04\x00\x00\x00\x2e\x00\x02', "limits": [0,180], "limits_type":0, "reference": 0},
+		"LOW_PASS_FILTER_ALL_SETTINGS":{"bin":b'\x04\x00\x00\x00\x08\x00\x06', "limits": ("LFE", "LOW_PASS_FILTER_FREQ","LOW_PASS_FILTER_SLOPE"), "limits_type":"combined", "reference": 0},
+		"LFE":{"bin":b'\x04\x00\x00\x00\x08\x00\x02', "limits": [0,1], "limits_type":1, "reference": 0}, #[ON, OFF], discrete type
+		"LOW_PASS_FILTER_FREQ":{"bin":b'\x04\x00\x00\x00\x0a\x00\x02', "limits": [30, 200], "limits_type":0, "reference": 0},
+		"LOW_PASS_FILTER_SLOPE":{"bin":b'\x04\x00\x00\x00\x0c\x00\x02',"limits": [6, 12, 18, 24], "limits_type":1, "reference": 0}, #discrete type
+		"ROOM_GAIN_ALL_SETTINGS":{"bin":b'\x04\x00\x00\x00\x26\x00\x06', "limits": ("ROOM_GAIN_ENABLE", "ROOM_GAIN_FREQ","ROOM_GAIN_SLOPE"), "limits_type":"combined", "reference": 0},
+		"ROOM_GAIN_ENABLE":{"bin":b'\x04\x00\x00\x00\x26\x00\x02', "limits": [1,0], "limits_type":1, "reference": 0}, #[ON, OFF], discrete type
+		"ROOM_GAIN_FREQ":{"bin":b'\x04\x00\x00\x00\x28\x00\x02', "limits": [25, 31, 40], "limits_type":1, "reference": 0}, #discrete type
+		"ROOM_GAIN_SLOPE":{"bin":b'\x04\x00\x00\x00\x2a\x00\x02', "limits": [6,12], "limits_type":1, "reference": 0}, #discrete type
+        "POWER_SETTING":{"bin":b'\x04\x00\x00\x00\x04\x00\x02', "limits": [0,2], "limits_type":0, "reference": 0}
 		}
 ##############   End SB-1000-PRO CONFIG    #############################
 
@@ -98,45 +85,47 @@ def notification_handler(handle, data):
     if checksum_calc(PARTIAL_FRAME[:len(PARTIAL_FRAME)-2]) == PARTIAL_FRAME[len(PARTIAL_FRAME)-2:]:
         crc_error = False
         FULL_FRAME = PARTIAL_FRAME
-        if SVS_PARAMS["VOLUME"] in FULL_FRAME:
+        if SVS_PARAMS["VOLUME"]["bin"] in FULL_FRAME:
             print("<- Received VOLUME data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
-            vol_slider.set(hex2volume_slider_position(FULL_FRAME))
-        elif SVS_PARAMS["PHASE"] in FULL_FRAME:
+            vol_slider.set(hex2data(FULL_FRAME)[0])
+        elif SVS_PARAMS["PHASE"]["bin"] in FULL_FRAME:
             print("<- Received PHASE data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
-            phase_slider.set(hex2phase_slider_position(FULL_FRAME))
-        elif SVS_PARAMS["LFE"] in FULL_FRAME:
+            phase_slider.set(hex2data(FULL_FRAME)[0])
+        elif SVS_PARAMS["LFE"]["bin"] in FULL_FRAME:
             print("<- Received LFE ON/OFF data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
-            lfe_var.set(hex2lfe_state(FULL_FRAME))
+            lfe_var.set(not(bool((hex2data(FULL_FRAME)[0]))))
             refresh_conditional_widgets()
-        elif SVS_PARAMS["LOW_PASS_FILTER_FREQ"] in FULL_FRAME:
+        elif SVS_PARAMS["LOW_PASS_FILTER_FREQ"]["bin"] in FULL_FRAME:
             print("<- Received LOW PASS FILTER FREQUENCY data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
-            lpfilter_slider.set(hex2lpfilter_slider_position(FULL_FRAME))
-        elif SVS_PARAMS["LOW_PASS_FILTER_SLOPE"] in FULL_FRAME:
+            lpfilter_slider.set(hex2data(FULL_FRAME)[0])
+        elif SVS_PARAMS["LOW_PASS_FILTER_SLOPE"]["bin"] in FULL_FRAME:
             print("<- Received LOW PASS FILTER SLOPE data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
-            lpfilter_slope_combo.current(hex2lpfilter_slope_combo_position(FULL_FRAME))
-        elif SVS_PARAMS["LOW_PASS_FILTER_ALL_SETTINGS"] in FULL_FRAME:
+            lpfilter_slope_combo.current(SVS_PARAMS["LOW_PASS_FILTER_SLOPE"]["limits"].index(hex2data(FULL_FRAME)[0]))
+        elif SVS_PARAMS["LOW_PASS_FILTER_ALL_SETTINGS"]["bin"] in FULL_FRAME:
             print("<- Received LOW PASS FILTER FULL_SETTINGS data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
-            lpfilter_slider.set(hex2lpfilter_slider_position(FULL_FRAME))
-            lpfilter_slope_combo.current(hex2lpfilter_slope_combo_position(FULL_FRAME))
-            lfe_var.set(hex2lfe_state(FULL_FRAME))
+            values = hex2data(FULL_FRAME)
+            lfe_var.set(not(bool(values[0])))
+            lpfilter_slider.set(values[1])
+            lpfilter_slope_combo.current(SVS_PARAMS["LOW_PASS_FILTER_SLOPE"]["limits"].index(hex2data(FULL_FRAME)[2]))
             refresh_conditional_widgets()
-        elif SVS_PARAMS["ROOM_GAIN_ENABLE"] in FULL_FRAME:
+        elif SVS_PARAMS["ROOM_GAIN_ENABLE"]["bin"] in FULL_FRAME:
             print("<- Received ROOM GAIN ON/OFF data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
-            room_gain_var.set(hex2room_gain_state(FULL_FRAME))
+            room_gain_var.set(bool(hex2data(FULL_FRAME)[0]))
             refresh_conditional_widgets()
-        elif SVS_PARAMS["ROOM_GAIN_FREQ"] in FULL_FRAME:
+        elif SVS_PARAMS["ROOM_GAIN_FREQ"]["bin"] in FULL_FRAME:
             print("<- Received ROOM GAIN FREQUENCY data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
-            room_gain_slider.set(hex2room_gain_freq(FULL_FRAME))
-        elif SVS_PARAMS["ROOM_GAIN_SLOPE"] in FULL_FRAME:
+            room_gain_slider.set(hex2data(FULL_FRAME)[0])
+        elif SVS_PARAMS["ROOM_GAIN_SLOPE"]["bin"] in FULL_FRAME:
             print("<- Received ROOM GAIN SLOPE data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
-            room_gain_slope_combo.current(hex2room_gain_slope_combo_position(FULL_FRAME))
-        elif SVS_PARAMS["ROOM_GAIN_ALL_SETTINGS"] in FULL_FRAME:
+            room_gain_slope_combo.current(SVS_PARAMS["ROOM_GAIN_SLOPE"]["limits"].index(hex2data(FULL_FRAME)[0]))
+        elif SVS_PARAMS["ROOM_GAIN_ALL_SETTINGS"]["bin"] in FULL_FRAME:
             print("<- Received ROOM GAIN FULL SETTINGS data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
-            room_gain_slider.set(hex2room_gain_freq(FULL_FRAME))
-            room_gain_slope_combo.current(hex2room_gain_slope_combo_position(FULL_FRAME))
-            room_gain_var.set(hex2room_gain_state(FULL_FRAME))
+            values = hex2data(FULL_FRAME)
+            room_gain_var.set(bool(values[0]))
+            room_gain_slider.set(values[1])
+            room_gain_slope_combo.current(SVS_PARAMS["ROOM_GAIN_SLOPE"]["limits"].index(hex2data(FULL_FRAME)[2]))
             refresh_conditional_widgets()
-        elif SVS_PARAMS["POWER_SETTING"] in FULL_FRAME:
+        elif SVS_PARAMS["POWER_SETTING"]["bin"] in FULL_FRAME:
             print("<- Received POWER SETTING data (Handle %s):  %s" % (hex(handle), hexlify(FULL_FRAME)))
         else:
             print("<- Received unknown data (Handle %s): %s" % (hex(handle), hexlify(FULL_FRAME)))
@@ -175,11 +164,11 @@ async def gatt_thread(address, char_uuid):
         await client.write_gatt_char(char_uuid, svs("ASK", "VOLUME"))
         await asyncio.sleep(0.1)
         await client.write_gatt_char(char_uuid, svs("ASK", "PHASE"))
-        await asyncio.sleep(0,1)
+        await asyncio.sleep(0.1)
         await client.write_gatt_char(char_uuid, svs("ASK", "LOW_PASS_FILTER_ALL_SETTINGS"))
-        await asyncio.sleep(0,1)
+        await asyncio.sleep(0.1)
         await client.write_gatt_char(char_uuid, svs("ASK", "ROOM_GAIN_ALL_SETTINGS"))
-        await asyncio.sleep(0,1)
+        await asyncio.sleep(0.1)
 
         while RUN_THREAD:
         #don't let this method die in order to RX continuosly
@@ -190,7 +179,7 @@ async def gatt_thread(address, char_uuid):
         print("Bleak Client Thread closed")
 
 def svs(command, param, data=b'\x00'):
-   frame = SVS_COMMANDS[command] + SVS_PARAMS[param] + data
+   frame = SVS_COMMANDS[command] + SVS_PARAMS[param]["bin"] + data
    frame = frame + checksum_calc(frame)
    print("-> " + command + " " + param + " " + str(hexlify(data)))
    return frame
@@ -240,41 +229,40 @@ def crcb(*i):
     return crc
 ########### End CRC16 XMODEM Routines #################
 
-
 ###############   GUI Routines   ######################
 
 def update_vol(self):
-    TX.BUFFER = svs("SET","VOLUME",data2hex(vol_slider.get(), VOL_REF))
+    TX.BUFFER = svs("SET","VOLUME",data2hex(vol_slider.get(), SVS_PARAMS["VOLUME"]["reference"]))
 
 def update_phase(self):
-    TX.BUFFER = svs("SET","PHASE",data2hex(phase_slider.get(), 0))
+    TX.BUFFER = svs("SET","PHASE",data2hex(phase_slider.get()))
 
 def lfe_opt_changed():
     refresh_conditional_widgets()
-    TX.BUFFER = svs("SET","LFE",data2hex(not(lfe_var.get()), 0))
+    TX.BUFFER = svs("SET","LFE",data2hex(not(lfe_var.get())))
 
 def update_lpfilter_freq(self):
     if not lfe_var.get():
     #as this callback is called when the click is released, be sure only to send svs set only if lfe = off
-        TX.BUFFER = svs("SET","LOW_PASS_FILTER_FREQ",data2hex(lpfilter_slider.get(), 0))
+        TX.BUFFER = svs("SET","LOW_PASS_FILTER_FREQ",data2hex(lpfilter_slider.get()))
 
 def update_lpfilter_slope(self):
-    TX.BUFFER = svs("SET","LOW_PASS_FILTER_SLOPE",data2hex(LP_SLOPE_LIMITS[lpfilter_slope_combo.current()], 0))
+    TX.BUFFER = svs("SET","LOW_PASS_FILTER_SLOPE",data2hex(lpfilter_slope_combo.get()))
 
 def room_gain_opt_changed():
     refresh_conditional_widgets()
-    TX.BUFFER = svs("SET","ROOM_GAIN_ENABLE", data2hex(room_gain_var.get(), 0))
+    TX.BUFFER = svs("SET","ROOM_GAIN_ENABLE", data2hex(room_gain_var.get()))
 
 def update_room_gain_freq(self):
     if room_gain_var.get():
     #as this callback is called when the click is released, be sure only to send svs set only if room_gain = on
-        TX.BUFFER = svs("SET","ROOM_GAIN_FREQ", data2hex(room_gain_slider.get(), 0))
+        TX.BUFFER = svs("SET","ROOM_GAIN_FREQ", data2hex(room_gain_slider.get()))
 
 def update_room_gain_slope(self):
-    TX.BUFFER = svs("SET","ROOM_GAIN_SLOPE", data2hex(ROOM_GAIN_SLOPE_LIMITS[room_gain_slope_combo.current()], 0))
+    TX.BUFFER = svs("SET","ROOM_GAIN_SLOPE", data2hex(room_gain_slope_combo.get()))
 
 def make_discrete_slider(value):
-    new_value = min(ROOM_GAIN_FREQ_LIMITS, key=lambda x:abs(x-float(value)))
+    new_value = min(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"], key=lambda x:abs(x-float(value)))
     room_gain_slider.set(new_value)
 
 def refresh_conditional_widgets():
@@ -306,88 +294,42 @@ def on_closing():
 ###########   End GUI Routines   ###################
 
 ###########   AUX Routines   ###################
-def data2hex(level, reference):
+def data2hex(level, reference=0):
     value_hex = (STEP*int(level) + reference).to_bytes(4, 'little')
     return value_hex[:3]
 
-def hex2volume_slider_position(data):
-    vol_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
-    if (vol_abs - VOL_REF)/STEP in range(VOL_LIMITS[0], VOL_LIMITS[1]):
-        vol = (vol_abs - VOL_REF)/STEP
-    elif vol_abs == 0:
-        vol = VOL_LIMITS[1]
+def hex2data(frame):
+    out = []
+    if len(frame) == 35:
+	#multidata frame
+        val_1 = 16*16*16*16*frame[18] + 16*16*frame[17] + frame[16]
+        val_2 = 16*16*16*16*frame[20] + 16*16*frame[19] + frame[18]
+        val_3 = 16*16*frame[21]
+        values = [val_1, val_2, val_3]
     else:
-        print("Unrecognized volume values received")
-    return vol
+	#single data frame
+        values = [16*16*16*16*frame[18] + 16*16*frame[17] + frame[16]]
+    for k in SVS_PARAMS.keys():
+        if SVS_PARAMS[k]["bin"] in frame:
+            frame_type = k
+            break;
+    for val in values:
+        if SVS_PARAMS[frame_type]["limits_type"] == "combined":
+            sub_frame_type = SVS_PARAMS[frame_type]["limits"][values.index(val)]
+        else:
+            sub_frame_type = frame_type
+        if SVS_PARAMS[sub_frame_type]["limits_type"] == 1:
+            check = SVS_PARAMS[sub_frame_type]["limits"]
+        else:
+            check = range(min(SVS_PARAMS[sub_frame_type]["limits"]),max(SVS_PARAMS[sub_frame_type]["limits"]) + 1)
 
-def hex2phase_slider_position(data):
-    phase_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
-    if phase_abs/STEP in range(PHASE_LIMITS[0],PHASE_LIMITS[1] + 1):
-        phase = phase_abs/STEP
-    else:
-        print("Unrecognized phase values received")
-    return phase
-
-def hex2lfe_state(data):
-    lfe_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
-    if lfe_abs in LFE_LIMITS:
-        lfe = not(bool(lfe_abs))
-    else:
-        print("Unrecognized LFE option value received")
-    return lfe
-
-def hex2lpfilter_slider_position(data):
-    if len(data) == 35:
-        lpfreq_abs = 16*16*16*16*data[20] + 16*16*data[19] + data[18]
-    else:
-        lpfreq_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
-    if lpfreq_abs/STEP in range(LP_FREQ_LIMITS[0], LP_FREQ_LIMITS[1] + 1):
-        freq = lpfreq_abs / STEP
-    else:
-        print("Unrecognized Low Pass Filter Frequency values received")
-    return int(freq)
-
-def hex2lpfilter_slope_combo_position(data):
-    if len(data) == 35:
-        slope_abs = 16*16*data[21]
-    else:
-        slope_abs = 16*16*data[17] + data[16]
-    if int(slope_abs/STEP) in LP_SLOPE_LIMITS:
-        slope = LP_SLOPE_LIMITS.index(int(slope_abs/STEP))
-    else:
-        print("Unrecognized low pass filter slope values received")
-    return slope
-
-def hex2room_gain_state(data):
-    room_gain_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
-    if room_gain_abs in ROOM_GAIN_LIMITS:
-        room_gain = bool(room_gain_abs)
-    else:
-        print("Unrecognized room gain option value received")
-    return room_gain
-
-def hex2room_gain_freq(data):
-    if len(data) == 35:
-        freq_abs = 16*16*16*16*data[20] + 16*16*data[19] + data[18]
-    else:
-        freq_abs = 16*16*16*16*data[18] + 16*16*data[17] + data[16]
-    if freq_abs / STEP in ROOM_GAIN_FREQ_LIMITS:
-        freq = freq_abs / STEP
-    else:
-        print("Unrecognized room gain frequency values received")
-    return int(freq)
-
-def hex2room_gain_slope_combo_position(data):
-    if len(data) == 35:
-        slope_abs = 16*16*data[21]
-    else:
-        slope_abs = 16*16*data[17] + data[16]
-    if int(slope_abs / STEP) in ROOM_GAIN_SLOPE_LIMITS:
-        slope = ROOM_GAIN_SLOPE_LIMITS.index(int(slope_abs / STEP))
-    else:
-        print("Unrecognized room gain slope values received")
-    return slope
-
+        if int((val - SVS_PARAMS[sub_frame_type]["reference"])/STEP) in check:
+            out.append(int((val - SVS_PARAMS[sub_frame_type]["reference"])/STEP))
+        elif (val - SVS_PARAMS[sub_frame_type]["reference"])/STEP < 0:
+            out.append(max(check))
+        else:
+            print("Unrecognized {0} ({1}) values received".format(sub_frame_type, frame_type))
+    return out
 
 ###########   End AUX Routines   ###################
 
@@ -397,7 +339,7 @@ if __name__ == "__main__":
     try:
         window = Tk()
         window.protocol("WM_DELETE_WINDOW", on_closing)
-        window.title("pySVS v.2.2 Beta - SVS Subwoofer Control")
+        window.title("pySVS v.2.3 Beta - SVS Subwoofer Control")
         window.geometry('550x400')
         window.resizable(False, False)
         style= ttk.Style()
@@ -405,28 +347,28 @@ if __name__ == "__main__":
         window.columnconfigure(16, weight=1)
         window.rowconfigure(16, weight=1)
 
-        vol_slider = Scale(window, from_=VOL_LIMITS[0], to=VOL_LIMITS[1], label = "Volume (dB)", orient=HORIZONTAL, resolution=1, length=200)
+        vol_slider = Scale(window, from_=SVS_PARAMS["VOLUME"]["limits"][0], to=SVS_PARAMS["VOLUME"]["limits"][1], label = "Volume (dB)", orient=HORIZONTAL, resolution=1, length=200)
         vol_slider.grid(column=4, row=3, padx = 20, pady = 15)
         vol_slider.bind("<ButtonRelease-1>", update_vol)
 
-        phase_slider = Scale(window, from_=PHASE_LIMITS[0], to=PHASE_LIMITS[1], label = "Phase (°)", orient=HORIZONTAL, resolution=1, length=200)
+        phase_slider = Scale(window, from_=SVS_PARAMS["PHASE"]["limits"][0], to=SVS_PARAMS["PHASE"]["limits"][1], label = "Phase (°)", orient=HORIZONTAL, resolution=1, length=200)
         phase_slider.grid(column=4, row=5, padx = 20, pady = 15)
         phase_slider.bind("<ButtonRelease-1>", update_phase)
 
-        lpfilter_slider = Scale(window, from_=LP_FREQ_LIMITS[0], to=LP_FREQ_LIMITS[1], label = "Low Pass Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200)
+        lpfilter_slider = Scale(window, from_=SVS_PARAMS["LOW_PASS_FILTER_FREQ"]["limits"][0], to=SVS_PARAMS["LOW_PASS_FILTER_FREQ"]["limits"][1], label = "Low Pass Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200)
         lpfilter_slider.grid(column=4, row=7, padx = 20, pady = 15)
         lpfilter_slider.bind("<ButtonRelease-1>", update_lpfilter_freq)
-        lpfilter_slope_combo=ttk.Combobox(window,values=[str(i) + " dB" for i in LP_SLOPE_LIMITS],width=7,state='readonly')
+        lpfilter_slope_combo=ttk.Combobox(window,values=[str(i) + " dB" for i in SVS_PARAMS["LOW_PASS_FILTER_SLOPE"]["limits"]],width=7,state='readonly')
         lpfilter_slope_combo.grid(column=5, row=7)
         lpfilter_slope_combo.bind("<<ComboboxSelected>>", update_lpfilter_slope)
         lfe_var = BooleanVar(value=False)
         lfe_checkbox = ttk.Checkbutton(variable=lfe_var, command=lfe_opt_changed)
         lfe_checkbox.grid(sticky="W", column=6, row=7)
 
-        room_gain_slider = Scale(window, from_=min(ROOM_GAIN_FREQ_LIMITS), to=max(ROOM_GAIN_FREQ_LIMITS), label = "Room Gain Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200, command=make_discrete_slider)
+        room_gain_slider = Scale(window, from_=min(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]), to=max(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]), label = "Room Gain Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200, command=make_discrete_slider)
         room_gain_slider.bind("<ButtonRelease-1>", update_room_gain_freq)
         room_gain_slider.grid(column=4, row=9, padx = 20, pady = 15)
-        room_gain_slope_combo=ttk.Combobox(window,values=[str(i) + " dB" for i in ROOM_GAIN_SLOPE_LIMITS],width=7,state='readonly')
+        room_gain_slope_combo=ttk.Combobox(window,values=[str(i) + " dB" for i in SVS_PARAMS["ROOM_GAIN_SLOPE"]["limits"]],width=7,state='readonly')
         room_gain_slope_combo.grid(column=5, row=9)
         room_gain_slope_combo.bind("<<ComboboxSelected>>", update_room_gain_slope)
         room_gain_var = BooleanVar(value=True)
@@ -445,5 +387,5 @@ if __name__ == "__main__":
         threading()
         window.mainloop()
 	
-    except Exception as e:
-        print(e)
+    except Exception:
+         traceback.print_exc()
