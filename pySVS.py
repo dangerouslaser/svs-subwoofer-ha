@@ -216,12 +216,6 @@ def _update_crc(crc, c):
     crc = crc & 0xffff
     return crc
 
-def crc(str):
-    crc = 0
-    for c in str:
-        crc = _update_crc(crc, ord(c))
-    return crc
-
 def crcb(*i):
     crc = 0
     for c in i:
