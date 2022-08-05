@@ -371,7 +371,7 @@ if __name__ == "__main__":
 
         try:
             subwoofer = Image.open(requests.get("https://i.imgur.com/qX85CCG.jpg", stream=True).raw)
-            subwoofer = subwoofer.resize((200, 200), Image.Resampling.LANCZOS)
+            subwoofer = subwoofer.resize((200, 200))
             subwoofer = ImageTk.PhotoImage(subwoofer)
             picframe = Label(window, image = subwoofer)
             picframe.grid(sticky="N", column=5, row=0, columnspan=9, rowspan=9)
