@@ -55,7 +55,7 @@ SVS_PARAMS = 	{
 		"ROOM_GAIN_ENABLE":{"bin":b'\x04\x00\x00\x00\x26\x00\x02', "limits": [1,0], "limits_type":1, "reference": 0}, #[ON, OFF], discrete type
 		"ROOM_GAIN_FREQ":{"bin":b'\x04\x00\x00\x00\x28\x00\x02', "limits": [25, 31, 40], "limits_type":1, "reference": 0}, #discrete type
 		"ROOM_GAIN_SLOPE":{"bin":b'\x04\x00\x00\x00\x2a\x00\x02', "limits": [6,12], "limits_type":1, "reference": 0}, #discrete type
-        "POWER_SETTING":{"bin":b'\x04\x00\x00\x00\x04\x00\x02', "limits": [0,2], "limits_type":0, "reference": 0}
+		"POWER_SETTING":{"bin":b'\x04\x00\x00\x00\x04\x00\x02', "limits": [0,2], "limits_type":0, "reference": 0}
 		}
 ##############   End SB-1000-PRO CONFIG    #############################
 
@@ -241,7 +241,7 @@ def update_lpfilter_freq(self):
         TX.BUFFER = svs("SET","LOW_PASS_FILTER_FREQ",data2hex(lpfilter_slider.get()))
 
 def update_lpfilter_slope(self):
-    TX.BUFFER = svs("SET","LOW_PASS_FILTER_SLOPE",data2hex(lpfilter_slope_combo.get()))
+    TX.BUFFER = svs("SET","LOW_PASS_FILTER_SLOPE",data2hex(lpfilter_slope_combo.get().replace(" dB","")))
 
 def room_gain_opt_changed():
     refresh_conditional_widgets()
@@ -253,7 +253,7 @@ def update_room_gain_freq(self):
         TX.BUFFER = svs("SET","ROOM_GAIN_FREQ", data2hex(room_gain_slider.get()))
 
 def update_room_gain_slope(self):
-    TX.BUFFER = svs("SET","ROOM_GAIN_SLOPE", data2hex(room_gain_slope_combo.get()))
+    TX.BUFFER = svs("SET","ROOM_GAIN_SLOPE", data2hex(room_gain_slope_combo.get().replace(" dB","")))
 
 def make_discrete_slider(value):
     new_value = min(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"], key=lambda x:abs(x-float(value)))
@@ -341,15 +341,15 @@ if __name__ == "__main__":
         window.columnconfigure(16, weight=1)
         window.rowconfigure(16, weight=1)
 
-        vol_slider = Scale(window, from_=SVS_PARAMS["VOLUME"]["limits"][0], to=SVS_PARAMS["VOLUME"]["limits"][1], label = "Volume (dB)", orient=HORIZONTAL, resolution=1, length=200)
+        vol_slider = Scale(window, from_=min(SVS_PARAMS["VOLUME"]["limits"]), to=max(SVS_PARAMS["VOLUME"]["limits"]), label = "Volume (dB)", orient=HORIZONTAL, resolution=1, length=200)
         vol_slider.grid(column=4, row=3, padx = 20, pady = 15)
         vol_slider.bind("<ButtonRelease-1>", update_vol)
 
-        phase_slider = Scale(window, from_=SVS_PARAMS["PHASE"]["limits"][0], to=SVS_PARAMS["PHASE"]["limits"][1], label = "Phase (°)", orient=HORIZONTAL, resolution=1, length=200)
+        phase_slider = Scale(window, from_=min(SVS_PARAMS["PHASE"]["limits"]), to=max(SVS_PARAMS["PHASE"]["limits"]), label = "Phase (°)", orient=HORIZONTAL, resolution=1, length=200)
         phase_slider.grid(column=4, row=5, padx = 20, pady = 15)
         phase_slider.bind("<ButtonRelease-1>", update_phase)
 
-        lpfilter_slider = Scale(window, from_=SVS_PARAMS["LOW_PASS_FILTER_FREQ"]["limits"][0], to=SVS_PARAMS["LOW_PASS_FILTER_FREQ"]["limits"][1], label = "Low Pass Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200)
+        lpfilter_slider = Scale(window, from_=min(SVS_PARAMS["LOW_PASS_FILTER_FREQ"]["limits"]), to=max(SVS_PARAMS["LOW_PASS_FILTER_FREQ"]["limits"]), label = "Low Pass Freq. (Hz)", orient=HORIZONTAL, resolution=1, length=200)
         lpfilter_slider.grid(column=4, row=7, padx = 20, pady = 15)
         lpfilter_slider.bind("<ButtonRelease-1>", update_lpfilter_freq)
         lpfilter_slope_combo=ttk.Combobox(window,values=[str(i) + " dB" for i in SVS_PARAMS["LOW_PASS_FILTER_SLOPE"]["limits"]],width=7,state='readonly')
