@@ -104,11 +104,11 @@ async def gatt_thread(address, char_uuid):
 		print(f"Connected: {client.is_connected}")
 
 		#print services
-		svcs = await client.get_services()
-		for service in svcs:
-			print("SERVICE: " + str(service))
+		print("Services:")
+		for service in client.services:
+			print(str(service))
 			for char in service.characteristics:
-				print("\tCHARACTERISTIC: " + str(char))
+				print("\t%s" % (str(char)))
 			print("")
 		#subscribe to svs parameters characteristic
 		await client.start_notify(char_uuid, notification_handler)
