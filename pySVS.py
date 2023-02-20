@@ -260,7 +260,7 @@ def make_room_gain__freq_discrete_slider(value):
 	new_value = min(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"], key=lambda x:abs(x-float(value)))
 	room_gain_slider.set(new_value)
 
-def refresh_widgets(self, values_dict={}):
+def refresh_widgets(values_dict={}):
 	for i in values_dict.keys():
 		if i == "VOLUME":
 			vol_slider.set(values_dict[i])
