@@ -104,11 +104,10 @@ async def gatt_thread(address, char_uuid):
 		print(f"Connected: {client.is_connected}")
 
 		#print services
-		print("Services:")
 		for service in client.services:
-			print(str(service))
+			print("SERVICE: " + str(service))
 			for char in service.characteristics:
-				print("\t%s" % (str(char)))
+				print("\tCHARACTERISTIC: " + str(char))
 			print("")
 		#subscribe to svs parameters characteristic
 		await client.start_notify(char_uuid, notification_handler)
@@ -161,9 +160,9 @@ def svs_decode(frame):
 			frame_type = k
 			break;
 	if "frame_type" in locals():
-		print("<- Received %s data (Handle %s):  %s" % (frame_type, hex(handle), hexlify(frame)))
+		print("<- Received %s data:  %s" % (frame_type, hexlify(frame)))
 	else:
-		print("<- Received unknown data (Handle %s): %s" % (hex(handle), hexlify(frame)))
+		print("<- Received unknown data: %s" % (hexlify(frame)))
 		return {}
 	for val in values:
 		if SVS_PARAMS[frame_type]["limits_type"] == "combined":
