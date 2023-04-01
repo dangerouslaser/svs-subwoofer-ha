@@ -2,7 +2,7 @@
 
 Graphical Python3 program (Tkinter) to control SVS SB-1000PRO Subwoofer parameters using bluetooth interface. Parameters "Volume", "Phase", Low Pass Filter","Room Gain Compensation" Parametric EQ and Presets are available.   
 v3: Totally rewritten. Added Parametric EQ and Presets compatibility. Added command-line options
-![GitHub Logo](https://github.com/logon84/pySVS/blob/master/pic.png)  
+![GitHub Logo](https://raw.githubusercontent.com/logon84/pySVS/main/pic.png)  
   
 ```
     pySVS ' + VERSION + '. Read and set SVS SB1000P Subwoofer values. By Logon84 http://github.com/logon84
