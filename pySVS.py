@@ -338,8 +338,6 @@ def svs_decode(frame):
                     O_RESET_ID[1] = key
                     break;
             output = {"FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "RESET_ID": O_RESET_ID, "CRC":O_CRC}
-        if O_FTYPE[1] == "SUB_INFO":
-            output = {"FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "CRC":O_CRC}
         if "SUB_INFO" in O_FTYPE[1] and "RESP" in O_FTYPE[1]:
             internal_data_length = int(len(bytes2hexstr(frame[5: len(frame) - 2]).rstrip(str(b'\x00')))/2)
             O_STR_DATA = frame[5:5 + internal_data_length]
