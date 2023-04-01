@@ -47,13 +47,13 @@ SVS_FRAME_TYPES = {
         "MEMWRITE": b'\xf0\x1f', 
         "MEMREAD": b'\xf1\x1f',
         "READ_RESP": b'\xf2\x00',
-		"RESET": b'\xf3\x1f',
+        "RESET": b'\xf3\x1f',
         "SUB_INFO": b'\xf4\x1f',
         "SUB_INFO_RESP": b'\xf5\x00',
-		"SUB_INFO2": b'\xfc\x1f',
+        "SUB_INFO2": b'\xfc\x1f',
         "SUB_INFO2_RESP": b'\xfd\x00',
-		"SUB_INFO3": b'\xfe\x1f',
-		"SUB_INFO3_RESP": b'\xff\x00'
+        "SUB_INFO3": b'\xfe\x1f',
+        "SUB_INFO3_RESP": b'\xff\x00'
         }
 
 SVS_PARAMS = {
