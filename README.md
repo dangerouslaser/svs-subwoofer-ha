@@ -6,7 +6,7 @@ v3: Totally rewritten. Added Parametric EQ and Presets compatibility. Added comm
 ![GitHub Logo](https://raw.githubusercontent.com/logon84/pySVS/main/pic.png)  
   
 ```
-    pySVS ' + VERSION + '. Read and set SVS SB1000P Subwoofer values. By Logon84 http://github.com/logon84
+    pySVS v3.0 Beta.. Read and set SVS SB1000P Subwoofer values. By Logon84 http://github.com/logon84
     Run pySVS.py without arguments to launch the GUI
     USAGE: pySVS.py <-b device> <-m MAC_Address> <parameter1> <value1> <parameter2> <value2> etc...
     -b dev or --btdevice=dev: Specify a different BT device to use (default is hci0).
