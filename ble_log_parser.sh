@@ -1,6 +1,6 @@
 #!/bin/bash
 
-tshark -Y btatt -O hci_h4,btatt -r $1 | awk -F'[: ]+' '$1~/Frame/ { printf "\n%s ", $2}; $2~/Direct/ {printf "%s ", $3}; $2~/Value/ {printf "%s", $3}' > traffic
+tshark -Y "btatt and btatt and btatt.handle==0x0011" -O hci_h4,btatt -r $1 | awk -F'[: ]+' '$1~/Frame/ { printf "\n%s ", $2}; $2~/Direct/ {printf "%s ", $3}; $2~/Value/ {printf "%s", $3}' > traffic
 
 #reverse traffic
 tac traffic > traffic_reversed
