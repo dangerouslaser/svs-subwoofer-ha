@@ -124,13 +124,13 @@ def RX_thread(handle, data):
         PARTIAL_FRAME = PARTIAL_FRAME + data
     
     decoded_frame = svs_decode(PARTIAL_FRAME)
-    if decoded_frame["FRAME_RECOGNIZED"]:
+    sync = decoded_frame["FRAME_RECOGNIZED"]
+    if sync:
         if GUI:
             print("<- Received %s %s [%s]" % (decoded_frame["FRAME_TYPE"][1], str(decoded_frame["ATTRIBUTES"]).replace("\'","").replace("]","").replace("[","").replace(", ","+"), bytes2hexstr(PARTIAL_FRAME)))
             refresh_widgets(decoded_frame["VALIDATED_VALUES"])
         elif "STANDBY" not in decoded_frame["ATTRIBUTES"]:
             print(decoded_frame["VALIDATED_VALUES"])
-    sync = decoded_frame["FRAME_RECOGNIZED"]
 
 def threading():
     # Call function
@@ -751,52 +751,18 @@ if __name__ == "__main__":
                     print("ERROR: Value for %s incorrect" % (param))
                     sys.exit(1)
 
-            #merge params if possible
-            bytes_left = 0
-            for key in SVS_PARAMS.keys():
-                if SVS_PARAMS[key]["limits_type"] == "group":
-                    key_to_merge = key
-                    params_to_merge = []
-                    bytes_left = SVS_PARAMS[key]["n_bytes"]
-                    data_types = []
-                    out = []
-                elif bytes_left > 0:
-                    if key in param_values.keys():
-                        data_types.append(None if param_values[key][0] is None else str(param_values[key][0]).replace(".","",1).isnumeric())
-                        merge = 1 if len(data_types) == 1 else merge*int(data_types[len(data_types)-1] == data_types[len(data_types)- 2])
-                        if merge:
-                            bytes_left = bytes_left - SVS_PARAMS[key]["n_bytes"]
-                            params_to_merge.append(key)
-                            if bytes_left == 0:
-                                for param in params_to_merge:
-                                    out = out + param_values[param]
-                                    del param_values[param]
-                                param_values.update({key_to_merge:out})
-                        else:
-                            #cancel merge operation
-                            bytes_left = 0
-                    else:
-                        #cancel merge operation
-                        bytes_left = 0
-
             if encode:
                 for param in param_values.keys():
                     if param_values[param][0] is None:
-                        if "PRESET" in param:
-                            print(bytes2hexstr(svs_encode("PRESETLOADSAVE",param)[0]))
-                        else:
-                            print(bytes2hexstr(svs_encode("MEMREAD",param)[0]))
+                        print(bytes2hexstr(svs_encode("PRESETLOADSAVE" if "PRESET" in param else "MEMREAD",param)[0]))
                     else:
-                        print(bytes2hexstr(svs_encode("MEMWRITE",param,param_values[param])[0]))
+                        print(bytes2hexstr(svs_encode("MEMWRITE", param, param_values[param])[0]))
                 sys.exit(0)
             else:
                 threading()
                 for param in param_values.keys():
                     if param_values[param][0] is None:
-                        if "PRESET" in param:
-                            TX.BUFFER=TX.BUFFER + svs_encode("PRESETLOADSAVE", param)
-                        else:
-                            TX.BUFFER=TX.BUFFER + svs_encode("MEMREAD", param)
+                        TX.BUFFER=TX.BUFFER + svs_encode("PRESETLOADSAVE" if "PRESET" in param else "MEMREAD", param)
                     else:
                         TX.BUFFER=TX.BUFFER + svs_encode("MEMWRITE", param, param_values[param])
                 while len(TX.BUFFER) > 0: pass
@@ -921,7 +887,7 @@ if __name__ == "__main__":
         
             standby_label = ttk.Label(tab3, text='Standby Mode:')
             standby_label.grid(column=1, row=3, sticky='W', padx=25, pady=15)
-            autoon_values = ["AUTO ON","TRIIGER","ON"]
+            autoon_values = ["AUTO ON","TRIGGER","ON"]
             autoon_combo = ttk.Combobox(tab3,values=autoon_values,width=7,state='readonly')
             autoon_combo.bind("<<ComboboxSelected>>", autoon_combo_changed)
             autoon_combo.grid(sticky="W",column=1, row=4, padx=30, ipadx = 20)
