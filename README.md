@@ -15,6 +15,7 @@ v3: Totally rewritten. Added Polarity, Parametric EQ and Presets compatibility. 
     -v or --version: Show program version.
     -e or --encode: Just print built frames based on param values.
     -d FRAME or --decode=FRAME: Decode values of a frame.
+    -i or --info: Show subwoofer info.
     PARAMETER LIST:
     	-l X@Y@Z or --lpf=X@Y@Z: Sets Low Pass Filter to X[0(OFF),1(ON)], Y[freq] and Z[slope].
     	-q V@W@X@Y@Z or --peq=V@W@X@Y@Z: Sets PEQ V[1..3], W[0(OFF),1(ON)], X[freq], Y[boost] and Z[Qfactor].
