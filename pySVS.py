@@ -1,19 +1,20 @@
 #!/usr/bin/python3 
 
+import asyncio
+from binascii import crc_hqx
 from binascii import hexlify
 from binascii import unhexlify
-import tkinter as tk
-from tkinter import ttk
-from PIL import ImageTk, Image
-import time
-import traceback
-from threading import Thread
-import requests
-import sys
-import asyncio
-import platform
 from bleak import BleakClient
 import getopt
+from PIL import ImageTk, Image
+import platform
+import requests
+import sys
+from threading import Thread
+import time
+import tkinter as tk
+from tkinter import ttk
+import traceback
 
 
 #EDIT THIS VALUE#####################
@@ -88,7 +89,7 @@ SVS_PARAMS = {
         "VOLUME": {"id":4, "offset":0x2c, "limits": [-60,0], "limits_type":0, "n_bytes":2, "reset_id": 12 },
         "PHASE": {"id":4, "offset":0x2e, "limits": [0,180], "limits_type":0, "n_bytes":2, "reset_id": 9 },
         "POLARITY": {"id":4, "offset":0x30, "limits": [0,1], "limits_type":1, "n_bytes":2, "reset_id": 10 }, #discrete
-        "PORTTUNING": {"id":4, "offset":0x32, "limits": [0, 1, 2], "limits_type":1, "n_bytes":2, "reset_id": 11 }, #discrete
+        "PORTTUNING": {"id":4, "offset":0x32, "limits": [0,30], "limits_type":0, "n_bytes":2, "reset_id": 11 }, #discrete
         "PRESET1NAME": {"id":8, "offset":0x0, "limits": [], "limits_type":2, "n_bytes":8, "reset_id": 13 }, #string
         "PRESET2NAME": {"id":9, "offset":0x0, "limits": [], "limits_type":2, "n_bytes":8, "reset_id": 13 }, #string
         "PRESET3NAME": {"id":0xA,"offset":0x0, "limits": [], "limits_type":2, "n_bytes":8, "reset_id": 13 }, #string
@@ -235,7 +236,7 @@ def svs_encode(ftype, param, data=""):
         print("ERROR: Can only encode DEV-to-SVS frame types")
         on_closing()
     frame = frame[:3] + (len(frame) + 4).to_bytes(2,"little") + frame[3:]
-    frame = frame + checksum_calc(frame)
+    frame = frame + crc_hqx(frame,0).to_bytes(2, 'little')
     meta = ftype + " " + param + " " + str(data)
     return [frame, meta]
 
@@ -252,7 +253,7 @@ def svs_decode(frame):
     O_VALIDATED_VALUES = {}
     O_PADDING = ""
 
-    O_CRC = ["0x" + bytes2hexstr(frame[len(frame) - 2:]), "OK" if frame[len(frame)-2:] == checksum_calc(frame[:len(frame)-2]) else "MISSMATCH"]
+    O_CRC = ["0x" + bytes2hexstr(frame[len(frame) - 2:]), "OK" if frame[len(frame)-2:] == crc_hqx(frame[:len(frame)-2],0).to_bytes(2, 'little') else "MISSMATCH"]
     O_FLENGTH = ["0x" + bytes2hexstr(frame[3:5]), int.from_bytes(frame[3:5], 'little'), len(frame)]
     O_RECOGNIZED =  (frame[0] == int.from_bytes(FRAME_PREAMBLE, 'little')) and (O_FLENGTH[1] == O_FLENGTH[2]) and (O_CRC[1] == "OK")
     if O_RECOGNIZED:
@@ -326,16 +327,16 @@ def svs_decode(frame):
             #read PADDING
             O_PADDING = "0x" + bytes2hexstr(frame[len(frame) - bytes_left_in_frame:len(frame)-2]) if(len(bytes2hexstr(frame[len(frame) - bytes_left_in_frame:len(frame)-2])) > 0) else ""
             output = {"ATTRIBUTES": O_ATTRIBUTES, "FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "SECT_1": O_SECT_1, "ID": O_ID, "MEMORY_START": O_MEM_START, "DATA_LENGTH": O_MEM_SIZE, "RAW_DATA": "0x" + bytes2hexstr(O_RAW_DATA), "INT_DATA": O_B_ENDIAN_DATA, "STR_DATA": O_RAW_DATA, "VALIDATED_VALUES": O_VALIDATED_VALUES, "PADDING": O_PADDING, "CRC":O_CRC}
-        if O_FTYPE[1] == "RESET":
+        elif O_FTYPE[1] == "RESET":
             O_RESET_ID = ["0x" + bytes2hexstr(frame[5:6]), "UNKNOWN"]
             for key in SVS_PARAMS.keys():
                 if SVS_PARAMS[key]["reset_id"] == frame[5]:
                     O_RESET_ID[1] = key
                     break;
             output = {"FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "RESET_ID": O_RESET_ID, "CRC":O_CRC}
-        if "SUB_INFO" in O_FTYPE[1]  and "RESP" not in O_FTYPE[1]:
+        elif "SUB_INFO" in O_FTYPE[1]  and "RESP" not in O_FTYPE[1]:
             output = {"FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "CRC":O_CRC}
-        if "SUB_INFO" in O_FTYPE[1] and "RESP" in O_FTYPE[1]:
+        elif "SUB_INFO" in O_FTYPE[1] and "RESP" in O_FTYPE[1]:
             padded_data = frame[5: len(frame) - 2]
             last_byte = padded_data[len(padded_data) - 1:len(padded_data)]
             padd = b''
@@ -361,42 +362,6 @@ def bytes2hexstr(bytes_input):
     return str(hexlify(bytes_input)).replace("\'","")[1:]
     
 ###################    End SVS Frame Routines    ###################
-
-###################    CRC16 XMODEM Routines    ###################
-
-def checksum_calc(in_data):
-    checksum = crcb(*[ int(in_data.hex()[i:i+2], 16) for i in range(0, len(in_data.hex()), 2)])
-    checksum = checksum.to_bytes(2, 'little')
-    return checksum
-
-def _initial(c):
-    crc = 0
-    c = c << 8
-    for j in range(8):
-        if (crc ^ c) & 0x8000:
-            crc = (crc << 1) ^ 0x1021
-        else:
-            crc = crc << 1
-        c = c << 1
-    return crc
-
-_tab = [ _initial(i) for i in range(256) ]
-
-def _update_crc(crc, c):
-    cc = 0xff & c
-
-    tmp = (crc >> 8) ^ cc
-    crc = (crc << 8) ^ _tab[tmp & 0xff]
-    crc = crc & 0xffff
-    return crc
-
-def crcb(*i):
-    crc = 0
-    for c in i:
-        crc = _update_crc(crc, c)
-    return crc
-
-###################    End CRC16 XMODEM Routines    ###################
 
 ###################    GUI Routines    ###################
 
@@ -781,6 +746,7 @@ if __name__ == "__main__":
         show_usage()
         GUI = 1
         try:
+            threading()
             window = tk.Tk()
             window.protocol("WM_DELETE_WINDOW", on_closing)
             window.title("pySVS " + VERSION + " - SVS Subwoofer Control")
@@ -902,7 +868,6 @@ if __name__ == "__main__":
             polarity_checkbox = ttk.Checkbutton(tab3, variable=polarity_var, command=polarity_opt_changed, text='Polarity')
             polarity_checkbox.place(x=25,y=180)
             
-            threading()
             window.mainloop()
 
         except Exception:
