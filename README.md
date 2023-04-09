@@ -19,7 +19,7 @@ v3: Totally rewritten. Added Polarity, Parametric EQ and Presets compatibility. 
     PARAMETER LIST:
     	-l X@Y@Z or --lpf=X@Y@Z: Sets Low Pass Filter to X[0(OFF),1(ON)], Y[freq] and Z[slope].
     	-q V@W@X@Y@Z or --peq=V@W@X@Y@Z: Sets PEQ V[1..3], W[0(OFF),1(ON)], X[freq], Y[boost] and Z[Qfactor].
-    	-r X@Y@Z or --roomgain=X@Y@Z: Sets RoomGain X[0(OFF),1(ON)], Y[freq] and Z[slope].')
+    	-r X@Y@Z or --roomgain=X@Y@Z: Sets RoomGain X[0(OFF),1(ON)], Y[freq] and Z[slope].
     	-o X or --volume=X: Sets volume level to X on subwoofer.
     	-f X or --phase=X: Sets phase level to X on subwoofer.
     	-k X or --polarity=X: Sets polarity to 0(+) or 1(-) on subwoofer.
