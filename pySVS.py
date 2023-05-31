@@ -795,7 +795,7 @@ if __name__ == "__main__":
             room_gain_checkbox.place(x=326,y=310)
 
             try:
-                subwoofer = Image.open(requests.get("https://i.imgur.com/qX85CCG.jpg", stream=True).raw)
+                subwoofer = Image.open(requests.get("https://raw.githubusercontent.com/logon84/pySVS/main/svs1000p.jpg", stream=True).raw)
                 subwoofer = subwoofer.resize((200, 200))
                 subwoofer = ImageTk.PhotoImage(subwoofer)
                 picframe = tk.Label(tab1, image = subwoofer)
