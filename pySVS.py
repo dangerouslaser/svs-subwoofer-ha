@@ -1,9 +1,7 @@
 #!/usr/bin/python3 
 
 import asyncio
-from binascii import crc_hqx
-from binascii import hexlify
-from binascii import unhexlify
+from binascii import crc_hqx, hexlify, unhexlify
 from bleak import BleakClient
 import getopt
 from PIL import ImageTk, Image
@@ -366,93 +364,93 @@ def bytes2hexstr(bytes_input):
 ###################    GUI Routines    ###################
 
 def autoon_combo_changed(self):
-    TX.BUFFER = svs_encode("MEMWRITE","STANDBY", autoon_values.index(autoon_combo.get()))
+    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","STANDBY", autoon_values.index(autoon_combo.get()))
 
 def lpf_opt_changed():
     refresh_widgets()
-    TX.BUFFER = svs_encode("MEMWRITE","LPF_ENABLE", int(lpf_var.get()))
+    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","LPF_ENABLE", int(lpf_var.get()))
 
 def update_lpfilter_freq(self):
     if lpf_var.get():
     #as this callback is called when the click is released, be sure only to send svs memwrite only if lpf = on
-        TX.BUFFER = svs_encode("MEMWRITE","LOW_PASS_FILTER_FREQ", lpfilter_slider.get())
+        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","LOW_PASS_FILTER_FREQ", lpfilter_slider.get())
 
 def update_lpfilter_slope(self):
-    TX.BUFFER = svs_encode("MEMWRITE","LOW_PASS_FILTER_SLOPE", int(lpfilter_slope_combo.get().replace(" dB","")))
+    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","LOW_PASS_FILTER_SLOPE", int(lpfilter_slope_combo.get().replace(" dB","")))
 
 def peq1_opt_changed():
     refresh_widgets()
-    TX.BUFFER = svs_encode("MEMWRITE","PEQ1_ENABLE", int(PEQ1_var.get()))
+    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ1_ENABLE", int(PEQ1_var.get()))
 
 def peq2_opt_changed():
     refresh_widgets()
-    TX.BUFFER = svs_encode("MEMWRITE","PEQ2_ENABLE", int(PEQ2_var.get()))
+    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ2_ENABLE", int(PEQ2_var.get()))
 
 def peq3_opt_changed():
     refresh_widgets()
-    TX.BUFFER = svs_encode("MEMWRITE","PEQ3_ENABLE", int(PEQ3_var.get()))
+    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ3_ENABLE", int(PEQ3_var.get()))
 
 def update_peq1_freq(self):
     if PEQ1_var.get():
-        TX.BUFFER = svs_encode("MEMWRITE","PEQ1_FREQ", PEQ1_freq_slider.get())
+        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ1_FREQ", PEQ1_freq_slider.get())
 
 def update_peq1_boost(self):
     if PEQ1_var.get():
-        TX.BUFFER = svs_encode("MEMWRITE","PEQ1_BOOST", PEQ1_boost_slider.get())
+        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ1_BOOST", PEQ1_boost_slider.get())
 
 def update_peq1_qfactor(self):
     if PEQ1_var.get():
-        TX.BUFFER = svs_encode("MEMWRITE","PEQ1_QFACTOR", PEQ1_qfactor_slider.get())
+        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ1_QFACTOR", PEQ1_qfactor_slider.get())
 
 def update_peq2_freq(self):
     if PEQ2_var.get():
-        TX.BUFFER = svs_encode("MEMWRITE","PEQ2_FREQ", PEQ2_freq_slider.get())
+        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ2_FREQ", PEQ2_freq_slider.get())
 
 def update_peq2_boost(self):
     if PEQ2_var.get():
-        TX.BUFFER = svs_encode("MEMWRITE","PEQ2_BOOST", PEQ2_boost_slider.get())
+        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ2_BOOST", PEQ2_boost_slider.get())
 
 def update_peq2_qfactor(self):
     if PEQ2_var.get():
-        TX.BUFFER = svs_encode("MEMWRITE","PEQ2_QFACTOR", PEQ2_qfactor_slider.get())
+        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ2_QFACTOR", PEQ2_qfactor_slider.get())
 
 def update_peq3_freq(self):
     if PEQ3_var.get():
-        TX.BUFFER = svs_encode("MEMWRITE","PEQ3_FREQ", PEQ3_freq_slider.get())
+        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ3_FREQ", PEQ3_freq_slider.get())
 
 def update_peq3_boost(self):
     if PEQ3_var.get():
-        TX.BUFFER = svs_encode("MEMWRITE","PEQ3_BOOST", PEQ3_boost_slider.get())
+        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ3_BOOST", PEQ3_boost_slider.get())
 
 def update_peq3_qfactor(self):
     if PEQ3_var.get():
-        TX.BUFFER = svs_encode("MEMWRITE","PEQ3_QFACTOR", PEQ3_qfactor_slider.get())
+        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ3_QFACTOR", PEQ3_qfactor_slider.get())
 
 def room_gain_opt_changed():
     refresh_widgets()
-    TX.BUFFER = svs_encode("MEMWRITE","ROOM_GAIN_ENABLE", int(room_gain_var.get()))
+    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","ROOM_GAIN_ENABLE", int(room_gain_var.get()))
 
 def update_room_gain_freq(self):
     if room_gain_var.get():
     #as this callback is called when the click is released, be sure only to send svs memwrite only if room_gain = on
-        TX.BUFFER = svs_encode("MEMWRITE","ROOM_GAIN_FREQ", room_gain_slider.get())
+        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","ROOM_GAIN_FREQ", room_gain_slider.get())
 
 def update_room_gain_slope(self):
-    TX.BUFFER = svs_encode("MEMWRITE","ROOM_GAIN_SLOPE", int(room_gain_slope_combo.get().replace(" dB","")))
+    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","ROOM_GAIN_SLOPE", int(room_gain_slope_combo.get().replace(" dB","")))
 
 def make_room_gain__freq_discrete_slider(value):
     new_value = min(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"], key=lambda x:abs(x-float(value)))
     room_gain_slider.set(new_value)
 
 def update_vol(self):
-    TX.BUFFER = svs_encode("MEMWRITE","VOLUME", vol_slider.get())
+    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","VOLUME", vol_slider.get())
 
 def update_phase(self):
-    TX.BUFFER = svs_encode("MEMWRITE","PHASE", phase_slider.get())
+    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PHASE", phase_slider.get())
 
 def polarity_opt_changed():
     refresh_widgets()
-    TX.BUFFER = svs_encode("MEMWRITE","POLARITY", int(polarity_var.get()))
+    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","POLARITY", int(polarity_var.get()))
 
 preset_combo_choice=3
 def preset_combo_changed(self):
@@ -460,25 +458,25 @@ def preset_combo_changed(self):
     preset_combo_choice=preset_values.index(preset_combo.get())
 
 def load_preset():
-    TX.BUFFER = svs_encode("PRESETLOADSAVE","PRESET" + str(preset_combo_choice + 1) + "LOAD")
+    TX.BUFFER = TX.BUFFER + svs_encode("PRESETLOADSAVE","PRESET" + str(preset_combo_choice + 1) + "LOAD")
 
 def save_preset():
     global preset_combo_choice
     if preset_combo_choice != 3:
     #avoid saving default profile
-        TX.BUFFER = svs_encode("PRESETLOADSAVE","PRESET" + str(preset_combo_choice + 1) + "SAVE")
+        TX.BUFFER = TX.BUFFER + svs_encode("PRESETLOADSAVE","PRESET" + str(preset_combo_choice + 1) + "SAVE")
 
 def rename_preset():
     global preset_combo_choice
     if preset_combo_choice != 3:
     #avoid renaming default profile
         filtered_input = ''.join([char for char in preset_combo.get().upper() if char.isalnum()])
-        filtered_input = filtered_input[:8]
+        filtered_input = filtered_input[:SVS_PARAMS["PRESET" + str(preset_combo_choice + 1) + "NAME"]["n_bytes"]]
         if filtered_input not in preset_values:
             preset_combo.set(filtered_input)
             preset_values[preset_combo_choice] = filtered_input
             preset_combo.configure(values=preset_values)
-            TX.BUFFER = svs_encode("MEMWRITE","PRESET" + str(preset_combo_choice + 1) + "NAME", filtered_input)
+            TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PRESET" + str(preset_combo_choice + 1) + "NAME", filtered_input)
         else:
             preset_combo.set(preset_values[preset_combo_choice])
     else:
@@ -715,13 +713,14 @@ if __name__ == "__main__":
             for param in param_values.keys():
                 if param_values[param][1] is None:
                     check = True
-                elif type(param_values[param][1]) == str:
-                    check = SVS_PARAMS[param]["limits_type"] == 2
+                elif SVS_PARAMS[param]["limits_type"] == 2:
+                    check = type(param_values[param][1]) == str
+                elif SVS_PARAMS[param]["limits_type"] == 1:
+                    check = param_values[param][1] in SVS_PARAMS[param]["limits"]
+                elif SVS_PARAMS[param]["limits_type"] == 0:
+                    check = max(SVS_PARAMS[param]["limits"]) >= param_values[param][1] >= min(SVS_PARAMS[param]["limits"])
                 else:
-                    if SVS_PARAMS[param]["limits_type"] == 1:
-                        check = param_values[param][1] in SVS_PARAMS[param]["limits"]
-                    elif SVS_PARAMS[param]["limits_type"] == 0:
-                        check = max(SVS_PARAMS[param]["limits"]) >= param_values[param][1] >= min(SVS_PARAMS[param]["limits"])
+                    check = False
                 
                 if not check:
                     print("ERROR: Value for %s incorrect" % (param))
@@ -792,7 +791,7 @@ if __name__ == "__main__":
             room_gain_slope_combo.bind("<<ComboboxSelected>>", update_room_gain_slope)
             room_gain_var = tk.BooleanVar(value=True)
             room_gain_checkbox = ttk.Checkbutton(tab1, variable=room_gain_var, command=room_gain_opt_changed)
-            room_gain_checkbox.place(x=326,y=310)
+            room_gain_checkbox.place(x=325,y=310)
 
             try:
                 subwoofer = Image.open(requests.get("https://raw.githubusercontent.com/logon84/pySVS/main/svs1000p.jpg", stream=True).raw)
