@@ -131,8 +131,7 @@ def RX_thread(handle, data):
         elif "STANDBY" not in decoded_frame["ATTRIBUTES"]:
             print(decoded_frame["VALIDATED_VALUES"])
 
-def threading():
-    # Call function
+def start_bt_daemon():
     t1=Thread(target=bleak_device)
     t1.start()
 
@@ -167,6 +166,14 @@ async def TX_thread(address, char_uuid):
                 await asyncio.sleep(0.2)
             await asyncio.sleep(0.2)
 
+def close_bt_daemon():
+    global RUN_THREAD
+    RUN_THREAD = False
+    if GUI:
+        window.destroy()
+        print("Exiting...")
+    while True: sys.exit(0)
+
 class TX:
     BUFFER = []
 ###################    End Bleak Routines    ###################
@@ -185,6 +192,7 @@ def svs_encode(ftype, param, data=""):
     # 				Offset to read from/write to (2 bytes) +
     # 					Size to read/write (2 bytes) + 
         frame = frame + SVS_PARAMS[param]["id"].to_bytes(4,"little") + SVS_PARAMS[param]["offset"].to_bytes(2,"little") + SVS_PARAMS[param]["n_bytes"].to_bytes(2,"little")
+
     elif ftype == "MEMWRITE":
 	#FRAME FORMAT:
     # PREAMBLE (1 byte) + 
@@ -201,6 +209,7 @@ def svs_encode(ftype, param, data=""):
             mask = 0 if data >= 0 else 0xFFFF
             encoded_data = encoded_data + ((int(STEP * abs(data)) ^ mask) + (mask % 2)).to_bytes(2, 'little')
         frame = frame + SVS_PARAMS[param]["id"].to_bytes(4,"little") + SVS_PARAMS[param]["offset"].to_bytes(2,"little") + SVS_PARAMS[param]["n_bytes"].to_bytes(2,"little") + encoded_data
+
     elif ftype == "MEMREAD":
 	#FRAME FORMAT:
     # PREAMBLE (1 byte) + 
@@ -214,6 +223,7 @@ def svs_encode(ftype, param, data=""):
     # 								PADDING (0/X bytes) [RESP only]
     # 									CRC (2 bytes)
         frame = frame + SVS_PARAMS[param]["id"].to_bytes(4,"little") + SVS_PARAMS[param]["offset"].to_bytes(2,"little") + SVS_PARAMS[param]["n_bytes"].to_bytes(2,"little")
+
     elif ftype == "RESET":
 	#FRAME FORMAT:
     # PREAMBLE (1 byte) + 
@@ -222,6 +232,7 @@ def svs_encode(ftype, param, data=""):
     # 			Reset id (1bytes) +
     # 				CRC (2 bytes)
         frame = frame + SVS_PARAMS[param]["reset_id"].to_bytes(1,"little")
+
     elif "SUB_INFO" in ftype and "RESP" not in ftype:
 	#FRAME FORMAT:
     # PREAMBLE (1 byte) + 
@@ -230,9 +241,11 @@ def svs_encode(ftype, param, data=""):
 	#			b'\x00' +
     # 				CRC (2 bytes)
         frame = frame + b'\x00'
+
     else:
         print("ERROR: Can only encode DEV-to-SVS frame types")
-        on_closing()
+        close_bt_daemon()
+
     frame = frame[:3] + (len(frame) + 4).to_bytes(2,"little") + frame[3:]
     frame = frame + crc_hqx(frame,0).to_bytes(2, 'little')
     meta = ftype + " " + param + " " + str(data)
@@ -260,6 +273,7 @@ def svs_decode(frame):
                 O_FTYPE = key
                 break;
         O_FTYPE = ["0x" + bytes2hexstr(frame[1:3]), O_FTYPE]
+
         if O_FTYPE[1] == "PRESETLOADSAVE":
             ID_position = 5
             O_ID = ["0x" + bytes2hexstr(frame[ID_position:ID_position + 4]), int.from_bytes(frame[ID_position:ID_position + 4], 'little')]
@@ -325,6 +339,7 @@ def svs_decode(frame):
             #read PADDING
             O_PADDING = "0x" + bytes2hexstr(frame[len(frame) - bytes_left_in_frame:len(frame)-2]) if(len(bytes2hexstr(frame[len(frame) - bytes_left_in_frame:len(frame)-2])) > 0) else ""
             output = {"ATTRIBUTES": O_ATTRIBUTES, "FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "SECT_1": O_SECT_1, "ID": O_ID, "MEMORY_START": O_MEM_START, "DATA_LENGTH": O_MEM_SIZE, "RAW_DATA": "0x" + bytes2hexstr(O_RAW_DATA), "INT_DATA": O_B_ENDIAN_DATA, "STR_DATA": O_RAW_DATA, "VALIDATED_VALUES": O_VALIDATED_VALUES, "PADDING": O_PADDING, "CRC":O_CRC}
+
         elif O_FTYPE[1] == "RESET":
             O_RESET_ID = ["0x" + bytes2hexstr(frame[5:6]), "UNKNOWN"]
             for key in SVS_PARAMS.keys():
@@ -332,8 +347,10 @@ def svs_decode(frame):
                     O_RESET_ID[1] = key
                     break;
             output = {"FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "RESET_ID": O_RESET_ID, "CRC":O_CRC}
+
         elif "SUB_INFO" in O_FTYPE[1]  and "RESP" not in O_FTYPE[1]:
             output = {"FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "CRC":O_CRC}
+
         elif "SUB_INFO" in O_FTYPE[1] and "RESP" in O_FTYPE[1]:
             padded_data = frame[5: len(frame) - 2]
             last_byte = padded_data[len(padded_data) - 1:len(padded_data)]
@@ -350,8 +367,10 @@ def svs_decode(frame):
                 O_VALIDATED_VALUES["UNKNOWN"] = bytes2hexstr(data)
             O_PADDING = "0x" + bytes2hexstr(padd)
             output = {"ATTRIBUTES": O_ATTRIBUTES,"FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "VALIDATED_VALUES": O_VALIDATED_VALUES, "PADDING": O_PADDING, "CRC":O_CRC}
+
         else:
             output = {"ATTRIBUTES": O_ATTRIBUTES, "FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "VALIDATED_VALUES": O_VALIDATED_VALUES, "PADDING": O_PADDING, "CRC":O_CRC}
+
     else:
         output = {"FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "CRC":O_CRC}
     return output
@@ -584,14 +603,6 @@ def refresh_widgets(values_dict={}):
         polarity_checkbox.configure(text='Polarity (-)')
     return
 
-def on_closing():
-    global RUN_THREAD
-    RUN_THREAD = False
-    if GUI:
-        window.destroy()
-        print("Exiting...")
-    while True: sys.exit(0)
-
 ###################    End GUI Routines    ###################
 
 ###################    main()    ###################
@@ -682,8 +693,8 @@ if __name__ == "__main__":
                     sys.exit(2)
             if opt in ("-r", "--roomgain"):
                 if len(opt_val.split("@")) == 3:
+                    sub_params = ["ROOM_GAIN_ENABLE","ROOM_GAIN_FREQ","ROOM_GAIN_SLOPE"]
                     for i in range(0,3):
-                        sub_params = ["ROOM_GAIN_ENABLE","ROOM_GAIN_FREQ","ROOM_GAIN_SLOPE"]
                         if len(opt_val.split("@")[i]) > 0:
                             param_values[sub_params[i]] = ["MEMREAD",None] if opt_val.split("@")[i].upper() == 'A' else ["MEMWRITE",int(float(opt_val.split("@")[i]))]
                 else:
@@ -731,12 +742,12 @@ if __name__ == "__main__":
                     print(bytes2hexstr(svs_encode(param_values[param][0], param, param_values[param][1])[0]))
                 sys.exit(0)
             else:
-                threading()
+                start_bt_daemon()
                 for param in param_values.keys():
                     TX.BUFFER=TX.BUFFER + svs_encode(param_values[param][0], param, param_values[param][1])
                 while len(TX.BUFFER) > 0: pass
                 time.sleep(0.5)
-                on_closing()
+                close_bt_daemon()
         else:
             print("Nothing to do!")
             sys.exit(0)
@@ -745,9 +756,9 @@ if __name__ == "__main__":
         show_usage()
         GUI = 1
         try:
-            threading()
+            start_bt_daemon()
             window = tk.Tk()
-            window.protocol("WM_DELETE_WINDOW", on_closing)
+            window.protocol("WM_DELETE_WINDOW", close_bt_daemon)
             window.title("pySVS " + VERSION + " - SVS Subwoofer Control")
             window.geometry('570x400')
             window.resizable(False, False)
