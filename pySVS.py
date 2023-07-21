@@ -140,31 +140,35 @@ def bleak_device():
     asyncio.run(TX_thread(ADDRESS, CHAR12))
 
 async def TX_thread(address, char_uuid):
-    async with BleakClient(address,adapter=dev) as client:
-        if GUI:
-            print(f"Connected: {client.is_connected}")
-            print("Services:")
-            for service in client.services:
-                print(str(service))
-                for char in service.characteristics:
-                    print("\t%s" % (str(char)))
-                print("")
-        #subscribe to svs parameters characteristic
-        await client.start_notify(char_uuid, RX_thread)
+    try:
+        async with BleakClient(address,adapter=dev) as client:
+            if GUI:
+                print(f"Connected: {client.is_connected}")
+                print("Services:")
+                for service in client.services:
+                    print(str(service))
+                    for char in service.characteristics:
+                        print("\t%s" % (str(char)))
+                    print("")
+            #subscribe to svs parameters characteristic
+            await client.start_notify(char_uuid, RX_thread)
 
-        #ask subwoofer for config
-        if GUI:
-            TX.BUFFER = svs_encode("MEMREAD", "FULL_SETTINGS") + svs_encode("MEMREAD", "PRESET1NAME") + svs_encode("MEMREAD", "PRESET2NAME") + svs_encode("MEMREAD", "PRESET3NAME")
+            #ask subwoofer for config
+            if GUI:
+                TX.BUFFER = svs_encode("MEMREAD", "FULL_SETTINGS") + svs_encode("MEMREAD", "PRESET1NAME") + svs_encode("MEMREAD", "PRESET2NAME") + svs_encode("MEMREAD", "PRESET3NAME")
 
-        while RUN_THREAD:
-        #don't let this method die in order to RX continuously
-            for n in range(0,len(TX.BUFFER), 2):
-                await client.write_gatt_char(char_uuid, TX.BUFFER[0])
-                if GUI:
-                    print("-> Sent %s [%s]" % (TX.BUFFER[1], bytes2hexstr(TX.BUFFER[0])))
-                del TX.BUFFER[0:2] #remove frame we just sent from buffer and its metadata
+            while RUN_THREAD:
+            #don't let this method die in order to RX continuously
+                for n in range(0,len(TX.BUFFER), 2):
+                    await client.write_gatt_char(char_uuid, TX.BUFFER[0])
+                    if GUI:
+                        print("-> Sent %s [%s]" % (TX.BUFFER[1], bytes2hexstr(TX.BUFFER[0])))
+                    del TX.BUFFER[0:2] #remove frame we just sent from buffer and its metadata
+                    await asyncio.sleep(0.2)
                 await asyncio.sleep(0.2)
-            await asyncio.sleep(0.2)
+    except:
+        traceback.print_exc()
+        TX.BUFFER = []
 
 def close_bt_daemon():
     global RUN_THREAD
@@ -630,7 +634,7 @@ def show_usage():
     return
 
 if __name__ == "__main__":
-    VERSION = "v3.0 Beta"
+    VERSION = "v3.1 Beta"
     dev="hci0"
     if len(sys.argv[1:]) > 0:
         GUI = 0
@@ -649,24 +653,24 @@ if __name__ == "__main__":
                     else:
                         print("Incorrect MAC specified")
                         sys.exit(1)
-            if opt in ("-h", "--help"):
+            elif opt in ("-h", "--help"):
                 show_usage()
                 sys.exit(0)
-            if opt in ("-v", "--version"):
+            elif opt in ("-v", "--version"):
                 print(VERSION)
                 sys.exit(0)
-            if opt in ("-b", "--btdevice"):
+            elif opt in ("-b", "--btdevice"):
                 dev=opt_val
-            if opt in ("-e", "--encode"):
+            elif opt in ("-e", "--encode"):
                 encode=1
-            if opt in ("-d", "--decode"):
+            elif opt in ("-d", "--decode"):
                 print(svs_decode(unhexlify(opt_val.replace("0x",""))))
                 sys.exit(0)
-            if opt in ("-i", "--info"):
+            elif opt in ("-i", "--info"):
                 param_values["INFO"] = ["SUB_INFO", None]
                 param_values["INFO2"] = ["SUB_INFO2", None]
                 param_values["INFO3"] = ["SUB_INFO3", None]
-            if opt in ("-l", "--lpf"):
+            elif opt in ("-l", "--lpf"):
                 if len(opt_val.split("@")) == 3:
                     sub_params = ["LPF_ENABLE","LOW_PASS_FILTER_FREQ","LOW_PASS_FILTER_SLOPE"]
                     for i in range(0,3):
@@ -676,7 +680,7 @@ if __name__ == "__main__":
                     print("ERROR: Values for LPF incorrect")
                     print("Examples of correct values: 1@@12, 0@50@12, A@@6")
                     sys.exit(1)
-            if opt in ("-q", "--peq"):
+            elif opt in ("-q", "--peq"):
                 if len(opt_val.split("@")) == 5:
                     peq_number = opt_val.split("@")[0]
                     if int(peq_number) in range(1,4):
@@ -691,7 +695,7 @@ if __name__ == "__main__":
                     print("ERROR: Values for PEQ incorrect")
                     print("Examples of correct values: 2@1@@@0.2, 3@0@40@-11.5@10, 1@A@@@")
                     sys.exit(2)
-            if opt in ("-r", "--roomgain"):
+            elif opt in ("-r", "--roomgain"):
                 if len(opt_val.split("@")) == 3:
                     sub_params = ["ROOM_GAIN_ENABLE","ROOM_GAIN_FREQ","ROOM_GAIN_SLOPE"]
                     for i in range(0,3):
@@ -701,13 +705,13 @@ if __name__ == "__main__":
                     print("ERROR: Values for Roomgain incorrect")
                     print("Examples of correct values: 1@@12, 0@31@12, A@@6")
                     sys.exit(1)
-            if opt in ("-o", "--volume"):
+            elif opt in ("-o", "--volume"):
                 param_values["VOLUME"] = ["MEMREAD",None] if opt_val.upper() == 'A' else ["MEMWRITE",int(float(opt_val))]
-            if opt in ("-f", "--phase"):
+            elif opt in ("-f", "--phase"):
                 param_values["PHASE"] = ["MEMREAD",None] if opt_val.upper() == 'A' else ["MEMWRITE",int(float(opt_val))]
-            if opt in ("-k", "--polarity"):
+            elif opt in ("-k", "--polarity"):
                 param_values["POLARITY"] = ["MEMREAD",None] if opt_val.upper() == 'A' else ["MEMWRITE",int(float(opt_val))]
-            if opt in ("-p", "--preset"):
+            elif opt in ("-p", "--preset"):
                 if int(opt_val) in range (1,5): 
                     param_values["PRESET" + opt_val + "LOAD"] = ["PRESETLOADSAVE",None]
                 else:
