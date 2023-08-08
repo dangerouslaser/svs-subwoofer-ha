@@ -47,8 +47,8 @@ SVS_FRAME_TYPES = {
         "MEMREAD": b'\xf1\x1f',
         "READ_RESP": b'\xf2\x00',
         "RESET": b'\xf3\x1f',
-        "SUB_INFO": b'\xf4\x1f',
-        "SUB_INFO_RESP": b'\xf5\x00',
+        "SUB_INFO1": b'\xf4\x1f',
+        "SUB_INFO1_RESP": b'\xf5\x00',
         "SUB_INFO2": b'\xfc\x1f',
         "SUB_INFO2_RESP": b'\xfd\x00',
         "SUB_INFO3": b'\xfe\x1f',
@@ -126,7 +126,7 @@ def RX_thread(handle, data):
     sync = decoded_frame["FRAME_RECOGNIZED"]
     if sync:
         if GUI:
-            print("<- Received %s %s [%s]" % (decoded_frame["FRAME_TYPE"][1], str(decoded_frame["ATTRIBUTES"]).replace("\'","").replace("]","").replace("[","").replace(", ","+"), bytes2hexstr(PARTIAL_FRAME)))
+            print("<- Received %s %s [%s]" % (decoded_frame["FRAME_TYPE"][1], str(decoded_frame["ATTRIBUTES"]), bytes2hexstr(PARTIAL_FRAME)))
             refresh_widgets(decoded_frame["VALIDATED_VALUES"])
         elif "STANDBY" not in decoded_frame["ATTRIBUTES"]:
             print(decoded_frame["VALIDATED_VALUES"])
@@ -168,11 +168,12 @@ async def TX_thread(address, char_uuid):
                 await asyncio.sleep(0.2)
     except:
         traceback.print_exc()
-        TX.BUFFER = []
+        close_bt_daemon()
 
 def close_bt_daemon():
     global RUN_THREAD
     RUN_THREAD = False
+    TX.BUFFER = []
     if GUI:
         window.destroy()
         print("Exiting...")
@@ -185,7 +186,6 @@ class TX:
 ###################    SVS Frame Routines    ###################
 
 def svs_encode(ftype, param, data=""):
-    encoded_data = b''
     frame = FRAME_PREAMBLE + SVS_FRAME_TYPES[ftype]
     if ftype == "PRESETLOADSAVE":
 	#FRAME FORMAT:
@@ -208,10 +208,10 @@ def svs_encode(ftype, param, data=""):
     # 						Data(0/X bytes) + 
     # 							CRC (2 bytes)
         if type(data) == str:
-            encoded_data = bytes(data.ljust(int(SVS_PARAMS[param]["n_bytes"]), "\x00"),'utf-8')[:SVS_PARAMS[param]["n_bytes"]]
+            encoded_data = bytes(data.ljust(SVS_PARAMS[param]["n_bytes"], "\x00"),'utf-8')[:SVS_PARAMS[param]["n_bytes"]]
         else:
             mask = 0 if data >= 0 else 0xFFFF
-            encoded_data = encoded_data + ((int(STEP * abs(data)) ^ mask) + (mask % 2)).to_bytes(2, 'little')
+            encoded_data = ((int(STEP * abs(data)) ^ mask) + (mask % 2)).to_bytes(2, 'little')
         frame = frame + SVS_PARAMS[param]["id"].to_bytes(4,"little") + SVS_PARAMS[param]["offset"].to_bytes(2,"little") + SVS_PARAMS[param]["n_bytes"].to_bytes(2,"little") + encoded_data
 
     elif ftype == "MEMREAD":
@@ -237,7 +237,7 @@ def svs_encode(ftype, param, data=""):
     # 				CRC (2 bytes)
         frame = frame + SVS_PARAMS[param]["reset_id"].to_bytes(1,"little")
 
-    elif "SUB_INFO" in ftype and "RESP" not in ftype:
+    elif ftype == "SUB_INFO1" or ftype == "SUB_INFO2" or ftype == "SUB_INFO3":
 	#FRAME FORMAT:
     # PREAMBLE (1 byte) + 
     # 	Frame type (2bytes) + 
@@ -247,7 +247,7 @@ def svs_encode(ftype, param, data=""):
         frame = frame + b'\x00'
 
     else:
-        print("ERROR: Can only encode DEV-to-SVS frame types")
+        print("ERROR: Unknown frame type to encode. Can only encode DEV-to-SVS frame types.")
         close_bt_daemon()
 
     frame = frame[:3] + (len(frame) + 4).to_bytes(2,"little") + frame[3:]
@@ -266,8 +266,8 @@ def svs_decode(frame):
     O_RAW_DATA = b''
     O_B_ENDIAN_DATA = []
     O_VALIDATED_VALUES = {}
+    O_RESET_ID = ""
     O_PADDING = ""
-
     O_CRC = ["0x" + bytes2hexstr(frame[len(frame) - 2:]), "OK" if frame[len(frame)-2:] == crc_hqx(frame[:len(frame)-2],0).to_bytes(2, 'little') else "MISSMATCH"]
     O_FLENGTH = ["0x" + bytes2hexstr(frame[3:5]), int.from_bytes(frame[3:5], 'little'), len(frame)]
     O_RECOGNIZED =  (frame[0] == int.from_bytes(FRAME_PREAMBLE, 'little')) and (O_FLENGTH[1] == O_FLENGTH[2]) and (O_CRC[1] == "OK")
@@ -289,7 +289,6 @@ def svs_decode(frame):
             O_MEM_START = "0x" + bytes2hexstr(frame[ID_position + 4:ID_position + 6])
             mem_size = int.from_bytes(frame[6+ID_position:8+ID_position], 'little')
             O_MEM_SIZE = ["0x" + bytes2hexstr(frame[6 + ID_position:8 + ID_position]), mem_size]
-            output = {"ATTRIBUTES": O_ATTRIBUTES, "FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "ID": O_ID, "MEMORY_START": O_MEM_START, "DATA_LENGTH": O_MEM_SIZE, "CRC":O_CRC}
 
         elif O_FTYPE[1] in ["MEMWRITE","MEMREAD","READ_RESP"]:
             ID_position = 9 if O_FTYPE[1] == "READ_RESP" else 5
@@ -336,13 +335,10 @@ def svs_decode(frame):
                                     check = value in SVS_PARAMS[attrib]["limits"]
                                 elif SVS_PARAMS[attrib]["limits_type"] == 0:
                                     check = max(SVS_PARAMS[attrib]["limits"]) >= value >= min(SVS_PARAMS[attrib]["limits"]) 
-
                             if check:
                                 O_VALIDATED_VALUES[attrib] = value
-
             #read PADDING
             O_PADDING = "0x" + bytes2hexstr(frame[len(frame) - bytes_left_in_frame:len(frame)-2]) if(len(bytes2hexstr(frame[len(frame) - bytes_left_in_frame:len(frame)-2])) > 0) else ""
-            output = {"ATTRIBUTES": O_ATTRIBUTES, "FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "SECT_1": O_SECT_1, "ID": O_ID, "MEMORY_START": O_MEM_START, "DATA_LENGTH": O_MEM_SIZE, "RAW_DATA": "0x" + bytes2hexstr(O_RAW_DATA), "INT_DATA": O_B_ENDIAN_DATA, "STR_DATA": O_RAW_DATA, "VALIDATED_VALUES": O_VALIDATED_VALUES, "PADDING": O_PADDING, "CRC":O_CRC}
 
         elif O_FTYPE[1] == "RESET":
             O_RESET_ID = ["0x" + bytes2hexstr(frame[5:6]), "UNKNOWN"]
@@ -350,33 +346,33 @@ def svs_decode(frame):
                 if SVS_PARAMS[key]["reset_id"] == frame[5]:
                     O_RESET_ID[1] = key
                     break;
-            output = {"FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "RESET_ID": O_RESET_ID, "CRC":O_CRC}
 
-        elif "SUB_INFO" in O_FTYPE[1]  and "RESP" not in O_FTYPE[1]:
-            output = {"FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "CRC":O_CRC}
-
-        elif "SUB_INFO" in O_FTYPE[1] and "RESP" in O_FTYPE[1]:
-            padded_data = frame[5: len(frame) - 2]
-            last_byte = padded_data[len(padded_data) - 1:len(padded_data)]
+        elif "SUB_INFO" in O_FTYPE[1]:
+            pending = frame[5:]
+            if "RESP" in O_FTYPE[1]:
+                O_SECT_1 = bytes2hexstr(pending[0:4])
+                O_ATTRIBUTES.append(O_FTYPE[1].split("_")[1])
+                if "1" in O_FTYPE[1]:
+                    O_VALIDATED_VALUES["DUMP"] = [{"CONTROL_SEQUENCE":[bytes2hexstr(pending[5:5+pending[4]]),hex(pending[5+pending[4]])]}, {"PARAM_DUMP": bytes2hexstr(pending[6+pending[4]:62])}]
+                    pending = pending[62:]
+                elif "2" in O_FTYPE[1]:
+                    O_VALIDATED_VALUES["SW_VERSION"] = pending[5:5+pending[4]].decode('utf-8')
+                    pending = pending[5+pending[4]:]
+                elif "3" in O_FTYPE[1]:
+                    O_VALIDATED_VALUES["HW_VERSION"] = pending[5:5+pending[4]].decode('utf-8')
+                    pending = pending[5+pending[4]:]
             padd = b''
-            while last_byte == b'\x00':
-                padd = b'\x00' + padd
-                last_byte = padded_data[len(padded_data)-len(padd)-1:len(padded_data)-len(padd)]
-            data = frame[5: len(frame) - 2 - len(padd)]
-            if b'\xc4\x00\x00\x20\x05' in data:
-                O_VALIDATED_VALUES["SW_VERSION"] = data[5:].decode('utf-8')
-            elif b'\xc4\x00\x00\x20\x0a' in data:
-                O_VALIDATED_VALUES["HW_VERSION"] = data[5:].decode('utf-8')
-            else:
-                O_VALIDATED_VALUES["UNKNOWN"] = bytes2hexstr(data)
-            O_PADDING = "0x" + bytes2hexstr(padd)
-            output = {"ATTRIBUTES": O_ATTRIBUTES,"FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "VALIDATED_VALUES": O_VALIDATED_VALUES, "PADDING": O_PADDING, "CRC":O_CRC}
+            for bbyte in pending[:len(pending)-2][::-1]:
+                if bbyte.to_bytes(1,'little') == b'\x00':
+                    padd = padd + b'\x00'
+                else:
+                    break;
+            O_PADDING = "0x" + bytes2hexstr(padd) if len(padd) > 0 else ""
 
-        else:
-            output = {"ATTRIBUTES": O_ATTRIBUTES, "FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "VALIDATED_VALUES": O_VALIDATED_VALUES, "PADDING": O_PADDING, "CRC":O_CRC}
-
-    else:
-        output = {"FRAME_RECOGNIZED": O_RECOGNIZED, "PREAMBLE": str(hex(frame[0])), "FRAME_TYPE": O_FTYPE, "FRAME_LENGTH": O_FLENGTH, "CRC":O_CRC}
+    output = {}
+    for key,val in [("ATTRIBUTES",O_ATTRIBUTES), ("FRAME_RECOGNIZED",O_RECOGNIZED), ("PREAMBLE",str(hex(frame[0]))), ("FRAME_TYPE",O_FTYPE), ("FRAME_LENGTH", O_FLENGTH), ("SECT_1", O_SECT_1), ("ID", O_ID), ("RESET_ID", O_RESET_ID) , ("MEMORY_START", O_MEM_START), ("DATA_LENGTH", O_MEM_SIZE), ("DATA", ["0x" + bytes2hexstr(O_RAW_DATA), O_RAW_DATA, O_B_ENDIAN_DATA] if len(bytes2hexstr(O_RAW_DATA)) > 0 else ""), ("VALIDATED_VALUES", O_VALIDATED_VALUES), ("PADDING", O_PADDING), ("CRC",O_CRC)]:
+        if type(val) == bool or (type(val) != str and len(val) > 0 ) or (type(val) == str and len(val) > 0):
+            output[key] = val
     return output
 
 def bytes2hexstr(bytes_input):
@@ -630,7 +626,7 @@ def show_usage():
     print('\t-f X or --phase=X: Sets phase level to X on subwoofer.')
     print('\t-k X or --polarity=X: Sets polarity to 0(+) or 1(-) on subwoofer.')
     print('\t-p X or --preset=X: Load preset X[1..4(FACTORY DEFAULT PRESET)] on subwoofer.')
-    print('\tTo ask subwoofer for one or more values, set parameter value to \"A\".\n')
+    print('\tTo ask subwoofer for one or more values, set parameter value to \"A\"sk.\n')
     return
 
 if __name__ == "__main__":
@@ -667,7 +663,7 @@ if __name__ == "__main__":
                 print(svs_decode(unhexlify(opt_val.replace("0x",""))))
                 sys.exit(0)
             elif opt in ("-i", "--info"):
-                param_values["INFO"] = ["SUB_INFO", None]
+                param_values["INFO1"] = ["SUB_INFO1", None]
                 param_values["INFO2"] = ["SUB_INFO2", None]
                 param_values["INFO3"] = ["SUB_INFO3", None]
             elif opt in ("-l", "--lpf"):
@@ -716,6 +712,7 @@ if __name__ == "__main__":
                     param_values["PRESET" + opt_val + "LOAD"] = ["PRESETLOADSAVE",None]
                 else:
                     print("ERROR: Incorrect preset number specified")
+
         try:
             operands = [int(arg) for arg in arguments]
         except ValueError:
@@ -735,8 +732,7 @@ if __name__ == "__main__":
                 elif SVS_PARAMS[param]["limits_type"] == 0:
                     check = max(SVS_PARAMS[param]["limits"]) >= param_values[param][1] >= min(SVS_PARAMS[param]["limits"])
                 else:
-                    check = False
-                
+                    check = False              
                 if not check:
                     print("ERROR: Value for %s incorrect" % (param))
                     sys.exit(1)
