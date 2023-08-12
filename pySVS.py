@@ -56,7 +56,7 @@ SVS_FRAME_TYPES = {
         }
 
 SVS_PARAMS = {
-        "FULL_SETTINGS":{"id":4, "offset":0x0, "limits": [], "limits_type":"group", "n_bytes":50, "reset_id": -1 },
+        "FULL_SETTINGS":{"id":4, "offset":0x0, "limits": [], "limits_type":"group", "n_bytes":52, "reset_id": -1 },
         "DISPLAY":{"id":4, "offset":0x0, "limits": [0,1,2], "limits_type":1, "n_bytes":2, "reset_id": 0 },  #discrete
         "DISPLAY_TIMEOUT":{"id":4, "offset":0x2,"limits": [0,10,20,30,40,50,60], "limits_type":1, "n_bytes":2, "reset_id": 1 },  #discrete
         "STANDBY":{"id":4, "offset":0x4, "limits": [0,1,2], "limits_type":1, "n_bytes":2, "reset_id": 2 }, #discrete
@@ -87,7 +87,7 @@ SVS_PARAMS = {
         "VOLUME": {"id":4, "offset":0x2c, "limits": [-60,0], "limits_type":0, "n_bytes":2, "reset_id": 12 },
         "PHASE": {"id":4, "offset":0x2e, "limits": [0,180], "limits_type":0, "n_bytes":2, "reset_id": 9 },
         "POLARITY": {"id":4, "offset":0x30, "limits": [0,1], "limits_type":1, "n_bytes":2, "reset_id": 10 }, #discrete
-        "PORTTUNING": {"id":4, "offset":0x32, "limits": [0,30], "limits_type":0, "n_bytes":2, "reset_id": 11 }, #discrete
+        "PORTTUNING": {"id":4, "offset":0x32, "limits": [20,30], "limits_type":1, "n_bytes":2, "reset_id": 11 }, #discrete
         "PRESET1NAME": {"id":8, "offset":0x0, "limits": [], "limits_type":2, "n_bytes":8, "reset_id": 13 }, #string
         "PRESET2NAME": {"id":9, "offset":0x0, "limits": [], "limits_type":2, "n_bytes":8, "reset_id": 13 }, #string
         "PRESET3NAME": {"id":0xA,"offset":0x0, "limits": [], "limits_type":2, "n_bytes":8, "reset_id": 13 }, #string
@@ -279,23 +279,20 @@ def svs_decode(frame):
         O_FTYPE = ["0x" + bytes2hexstr(frame[1:3]), O_FTYPE]
 
         if O_FTYPE[1] == "PRESETLOADSAVE":
-            ID_position = 5
-            O_ID = ["0x" + bytes2hexstr(frame[ID_position:ID_position + 4]), int.from_bytes(frame[ID_position:ID_position + 4], 'little')]
+            O_ID = ["0x" + bytes2hexstr(frame[5:9]), int.from_bytes(frame[5:9], 'little')]
             for key in SVS_PARAMS.keys():
                 if SVS_PARAMS[key]["id"] == O_ID[1]:
                     O_ID =  O_ID + [key]
                     break;
-            mem_start = int.from_bytes(frame[ID_position + 4:ID_position + 6], 'little')
-            O_MEM_START = "0x" + bytes2hexstr(frame[ID_position + 4:ID_position + 6])
-            mem_size = int.from_bytes(frame[6+ID_position:8+ID_position], 'little')
-            O_MEM_SIZE = ["0x" + bytes2hexstr(frame[6 + ID_position:8 + ID_position]), mem_size]
+            O_MEM_START = ["0x" + bytes2hexstr(frame[9:11]),int.from_bytes(frame[9:11], 'little')]
+            O_MEM_SIZE = ["0x" + bytes2hexstr(frame[11:13]), int.from_bytes(frame[11:13], 'little')]
 
         elif O_FTYPE[1] in ["MEMWRITE","MEMREAD","READ_RESP"]:
             ID_position = 9 if O_FTYPE[1] == "READ_RESP" else 5
-            O_SECT_1 = "0x" + bytes2hexstr(frame[5:ID_position]) if ID_position > 5 else ""
+            O_SECT_1 = ["0x" + bytes2hexstr(frame[5:ID_position]), int.from_bytes(frame[5:ID_position], 'little')] if ID_position > 5 else ""
             O_ID = ["0x" + bytes2hexstr(frame[ID_position:ID_position + 4]), int.from_bytes(frame[ID_position:ID_position + 4], 'little')]
             mem_start = int.from_bytes(frame[ID_position + 4:ID_position + 6], 'little')
-            O_MEM_START = "0x" + bytes2hexstr(frame[ID_position + 4:ID_position + 6])
+            O_MEM_START = ["0x" + bytes2hexstr(frame[ID_position + 4:ID_position + 6]), mem_start]
             mem_size = int.from_bytes(frame[6+ID_position:8+ID_position], 'little')
             O_MEM_SIZE = ["0x" + bytes2hexstr(frame[6 + ID_position:8 + ID_position]), mem_size]
             bytes_left_in_frame = len(frame[8 + ID_position:])
@@ -317,7 +314,7 @@ def svs_decode(frame):
                             break;
 
             #read datas
-            if bytes_left_in_frame - 2 >= mem_size:
+            if O_FTYPE[1] != "MEMREAD":
                 for attrib in O_ATTRIBUTES:
                     for offset in range(len(O_B_ENDIAN_DATA),int(SVS_PARAMS[attrib]["n_bytes"]/2) + len(O_B_ENDIAN_DATA)):
                         O_B_ENDIAN_DATA.append(int.from_bytes(frame[ID_position + 8 + 2*offset:ID_position + 10 + 2*offset],'little'))
@@ -350,12 +347,12 @@ def svs_decode(frame):
         elif "SUB_INFO" in O_FTYPE[1]:
             next_data = 5
             if "RESP" in O_FTYPE[1]:
-                O_SECT_1 = "0x" + bytes2hexstr(frame[next_data:next_data+4])
+                O_SECT_1 = ["0x" + bytes2hexstr(frame[next_data:next_data+4]), int.from_bytes(frame[next_data:next_data+4], 'little')]
                 next_data = next_data + 4
                 O_ATTRIBUTES.append(O_FTYPE[1].split("_")[1])
                 if "1" in O_FTYPE[1]:
-                    O_VALIDATED_VALUES["DUMP"] = [{"CONTROL_SEQUENCE":[bytes2hexstr(frame[next_data+1:next_data+1+frame[next_data]]),hex(frame[next_data+1+frame[next_data]])]}, {"PARAM_DUMP": bytes2hexstr(frame[next_data+2+frame[next_data]:next_data+2+frame[next_data] + 42])}]
-                    next_data = next_data+2+frame[next_data] + 42
+                    O_VALIDATED_VALUES["DUMP"] = [{"CONTROL_SEQUENCE":[bytes2hexstr(frame[next_data+1:next_data+1+frame[next_data]]),hex(frame[next_data+1+frame[next_data]])]}, {"PARAM_DUMP": bytes2hexstr(frame[next_data + 2 + frame[next_data]:next_data + frame[next_data] + 44])}]
+                    next_data = next_data + frame[next_data] + 44
                 elif "2" in O_FTYPE[1]:
                     O_VALIDATED_VALUES["SW_VERSION"] = frame[next_data+1:next_data+1+frame[next_data]].decode('utf-8')
                     next_data = next_data+1+frame[next_data]
