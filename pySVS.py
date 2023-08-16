@@ -56,48 +56,48 @@ SVS_FRAME_TYPES = {
         }
 
 SVS_PARAMS = {
-        "FULL_SETTINGS":{"id":4, "offset":0x0, "limits": [], "limits_type":"group", "n_bytes":52, "reset_id": -1 },
+        "FULL_SETTINGS":{"id":4, "offset":0x0, "limits": [], "limits_type":"group", "n_bytes":52, "reset_id": -1 }, #group
         "DISPLAY":{"id":4, "offset":0x0, "limits": [0,1,2], "limits_type":1, "n_bytes":2, "reset_id": 0 },  #discrete
-        "DISPLAY_TIMEOUT":{"id":4, "offset":0x2,"limits": [0,10,20,30,40,50,60], "limits_type":1, "n_bytes":2, "reset_id": 1 },  #discrete
+        "DISPLAY_TIMEOUT":{"id":4, "offset":0x2,"limits": [0,10,20,30,40,50,60], "limits_type":1, "n_bytes":2, "reset_id": 1 }, #discrete
         "STANDBY":{"id":4, "offset":0x4, "limits": [0,1,2], "limits_type":1, "n_bytes":2, "reset_id": 2 }, #discrete
         "BRIGHTNESS":{"id":4, "offset":0x6, "limits": [0,1,2,3,4,5,6,7], "limits_type":1, "n_bytes":2, "reset_id": 14 }, #discrete
         "LOW_PASS_FILTER_ALL_SETTINGS":{"id":4, "offset":0x8, "limits": [], "limits_type":"group", "n_bytes":6, "reset_id": 3 }, #group
         "LPF_ENABLE":{"id":4, "offset":0x8, "limits": [0,1], "limits_type":1, "n_bytes":2, "reset_id": 3 }, #discrete
-        "LOW_PASS_FILTER_FREQ":{"id":4, "offset":0xa, "limits": [30, 200], "limits_type":0, "n_bytes":2, "reset_id": 3 },
+        "LOW_PASS_FILTER_FREQ":{"id":4, "offset":0xa, "limits": [30, 200], "limits_type":0, "n_bytes":2, "reset_id": 3 }, #continous
         "LOW_PASS_FILTER_SLOPE":{"id":4, "offset":0xc,"limits": [6, 12, 18, 24], "limits_type":1, "n_bytes":2, "reset_id": 3 }, #discrete
         "PEQ1_ALL_SETTINGS":{"id":4, "offset":0xe,"limits": [], "limits_type":"group", "n_bytes":8, "reset_id": 5 }, #group
         "PEQ1_ENABLE":{"id":4, "offset":0xe,"limits": [0,1], "limits_type":1, "n_bytes":2, "reset_id": 5 }, #discrete
-        "PEQ1_FREQ":{"id":4, "offset":0x10,"limits": [20,200], "limits_type":0, "n_bytes":2, "reset_id": 5 },
-        "PEQ1_BOOST":{"id":4, "offset":0x12,"limits": [-12.0,6.0], "limits_type":0, "n_bytes":2, "reset_id": 5 },
-        "PEQ1_QFACTOR":{"id":4, "offset":0x14,"limits": [0.2,10.0], "limits_type":0, "n_bytes":2, "reset_id": 5 },
+        "PEQ1_FREQ":{"id":4, "offset":0x10,"limits": [20,200], "limits_type":0, "n_bytes":2, "reset_id": 5 }, #continous
+        "PEQ1_BOOST":{"id":4, "offset":0x12,"limits": [-12.0,6.0], "limits_type":0, "n_bytes":2, "reset_id": 5 }, #continous
+        "PEQ1_QFACTOR":{"id":4, "offset":0x14,"limits": [0.2,10.0], "limits_type":0, "n_bytes":2, "reset_id": 5 }, #continous
         "PEQ2_ALL_SETTINGS":{"id":4, "offset":0x16,"limits": [], "limits_type":"group", "n_bytes":8, "reset_id": 5 }, #group
         "PEQ2_ENABLE":{"id":4, "offset":0x16,"limits": [0,1], "limits_type":1, "n_bytes":2, "reset_id": 5 }, #discrete
-        "PEQ2_FREQ":{"id":4, "offset":0x18,"limits": [20,200], "limits_type":0, "n_bytes":2, "reset_id": 5 },
-        "PEQ2_BOOST":{"id":4, "offset":0x1a,"limits": [-12.0,6.0], "limits_type":0, "n_bytes":2, "reset_id": 5 },
-        "PEQ2_QFACTOR":{"id":4, "offset":0x1c,"limits": [0.2,10.0], "limits_type":0, "n_bytes":2, "reset_id": 5 },
+        "PEQ2_FREQ":{"id":4, "offset":0x18,"limits": [20,200], "limits_type":0, "n_bytes":2, "reset_id": 5 }, #continous
+        "PEQ2_BOOST":{"id":4, "offset":0x1a,"limits": [-12.0,6.0], "limits_type":0, "n_bytes":2, "reset_id": 5 }, #continous
+        "PEQ2_QFACTOR":{"id":4, "offset":0x1c,"limits": [0.2,10.0], "limits_type":0, "n_bytes":2, "reset_id": 5 }, #continous
         "PEQ3_ALL_SETTINGS":{"id":4, "offset":0x1e,"limits": [], "limits_type":"group", "n_bytes":8, "reset_id": 5 }, #group
         "PEQ3_ENABLE":{"id":4, "offset":0x1e,"limits": [0,1], "limits_type":1, "n_bytes":2, "reset_id": 5 }, #discrete
-        "PEQ3_FREQ":{"id":4, "offset":0x20,"limits": [20,200], "limits_type":0, "n_bytes":2, "reset_id": 5 },
-        "PEQ3_BOOST":{"id":4, "offset":0x22,"limits": [-12.0,6.0], "limits_type":0, "n_bytes":2, "reset_id": 5 },
-        "PEQ3_QFACTOR":{"id":4, "offset":0x24,"limits": [0.2,10.0], "limits_type":0, "n_bytes":2, "reset_id": 5 },
+        "PEQ3_FREQ":{"id":4, "offset":0x20,"limits": [20,200], "limits_type":0, "n_bytes":2, "reset_id": 5 }, #continous
+        "PEQ3_BOOST":{"id":4, "offset":0x22,"limits": [-12.0,6.0], "limits_type":0, "n_bytes":2, "reset_id": 5 }, #continous
+        "PEQ3_QFACTOR":{"id":4, "offset":0x24,"limits": [0.2,10.0], "limits_type":0, "n_bytes":2, "reset_id": 5 }, #continous
         "ROOM_GAIN_ALL_SETTINGS":{"id":4, "offset":0x26, "limits": [], "limits_type":"group", "n_bytes":6, "reset_id": 8 }, #group
         "ROOM_GAIN_ENABLE":{"id":4, "offset":0x26, "limits": [0,1], "limits_type":1, "n_bytes":2, "reset_id": 8}, #discrete
         "ROOM_GAIN_FREQ":{"id":4, "offset":0x28, "limits": [25, 31, 40], "limits_type":1, "n_bytes":2, "reset_id": 8 }, #discrete
         "ROOM_GAIN_SLOPE":{"id":4, "offset":0x2a, "limits": [6,12], "limits_type":1, "n_bytes":2, "reset_id": 8 }, #discrete
-        "VOLUME": {"id":4, "offset":0x2c, "limits": [-60,0], "limits_type":0, "n_bytes":2, "reset_id": 12 },
-        "PHASE": {"id":4, "offset":0x2e, "limits": [0,180], "limits_type":0, "n_bytes":2, "reset_id": 9 },
+        "VOLUME": {"id":4, "offset":0x2c, "limits": [-60,0], "limits_type":0, "n_bytes":2, "reset_id": 12 }, #continous
+        "PHASE": {"id":4, "offset":0x2e, "limits": [0,180], "limits_type":0, "n_bytes":2, "reset_id": 9 }, #continous
         "POLARITY": {"id":4, "offset":0x30, "limits": [0,1], "limits_type":1, "n_bytes":2, "reset_id": 10 }, #discrete
         "PORTTUNING": {"id":4, "offset":0x32, "limits": [20,30], "limits_type":1, "n_bytes":2, "reset_id": 11 }, #discrete
         "PRESET1NAME": {"id":8, "offset":0x0, "limits": [], "limits_type":2, "n_bytes":8, "reset_id": 13 }, #string
         "PRESET2NAME": {"id":9, "offset":0x0, "limits": [], "limits_type":2, "n_bytes":8, "reset_id": 13 }, #string
         "PRESET3NAME": {"id":0xA,"offset":0x0, "limits": [], "limits_type":2, "n_bytes":8, "reset_id": 13 }, #string
-        "PRESET1LOAD": {"id":0x18, "offset":0x1, "limits": [], "limits_type":1, "n_bytes":0, "reset_id": -1 },
-        "PRESET2LOAD": {"id":0x19, "offset":0x1, "limits": [], "limits_type":1, "n_bytes":0, "reset_id": -1 },
-        "PRESET3LOAD": {"id":0x1A, "offset":0x1, "limits": [], "limits_type":1, "n_bytes":0, "reset_id": -1 },
-        "PRESET4LOAD": {"id":0x1B, "offset":0x1, "limits": [], "limits_type":1, "n_bytes":0, "reset_id": -1},
-        "PRESET1SAVE": {"id":0x1C, "offset":0x1, "limits": [0,1], "limits_type":1, "n_bytes":0, "reset_id": -1 },
-        "PRESET2SAVE": {"id":0x1D, "offset":0x1, "limits": [0,1], "limits_type":1, "n_bytes":0, "reset_id": -1 },
-        "PRESET3SAVE": {"id":0x1E, "offset":0x1, "limits": [0,1], "limits_type":1, "n_bytes":0, "reset_id": -1 }
+        "PRESET1LOAD": {"id":0x18, "offset":0x1, "limits": [], "limits_type":-1, "n_bytes":0, "reset_id": -1 },
+        "PRESET2LOAD": {"id":0x19, "offset":0x1, "limits": [], "limits_type":-1, "n_bytes":0, "reset_id": -1 },
+        "PRESET3LOAD": {"id":0x1A, "offset":0x1, "limits": [], "limits_type":-1, "n_bytes":0, "reset_id": -1 },
+        "PRESET4LOAD": {"id":0x1B, "offset":0x1, "limits": [], "limits_type":-1, "n_bytes":0, "reset_id": -1 },
+        "PRESET1SAVE": {"id":0x1C, "offset":0x1, "limits": [], "limits_type":-1, "n_bytes":0, "reset_id": -1 },
+        "PRESET2SAVE": {"id":0x1D, "offset":0x1, "limits": [], "limits_type":-1, "n_bytes":0, "reset_id": -1 },
+        "PRESET3SAVE": {"id":0x1E, "offset":0x1, "limits": [], "limits_type":-1, "n_bytes":0, "reset_id": -1 }
         }
 
 ###################    End SB-1000-PRO CONFIG    ###################
@@ -316,7 +316,7 @@ def svs_decode(frame):
             #read datas
             if O_FTYPE[1] != "MEMREAD":
                 for attrib in O_ATTRIBUTES:
-                    for offset in range(len(O_B_ENDIAN_DATA),int(SVS_PARAMS[attrib]["n_bytes"]/2) + len(O_B_ENDIAN_DATA)):
+                    for offset in range(len(O_B_ENDIAN_DATA),len(O_B_ENDIAN_DATA) + int(SVS_PARAMS[attrib]["n_bytes"]/2)):
                         O_B_ENDIAN_DATA.append(int.from_bytes(frame[ID_position + 8 + 2*offset:ID_position + 10 + 2*offset],'little'))
                         O_RAW_DATA = O_RAW_DATA + frame[ID_position + 8 + 2*offset:ID_position + 10 + 2*offset]
                         bytes_left_in_frame = bytes_left_in_frame - 2
@@ -449,7 +449,7 @@ def update_room_gain_freq(self):
 def update_room_gain_slope(self):
     TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","ROOM_GAIN_SLOPE", int(room_gain_slope_combo.get().replace(" dB","")))
 
-def make_room_gain__freq_discrete_slider(value):
+def make_room_gain_freq_discrete_slider(value):
     new_value = min(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"], key=lambda x:abs(x-float(value)))
     room_gain_slider.set(new_value)
 
@@ -786,7 +786,7 @@ if __name__ == "__main__":
             lpf_checkbox = ttk.Checkbutton(tab1, variable=lpf_var, command=lpf_opt_changed)
             lpf_checkbox.place(x=325,y=218)
 
-            room_gain_slider = tk.Scale(tab1, from_=min(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]), to=max(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]), label = "Room Gain Freq. (Hz)", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"][0]) == int else 0.1, length=200, command=make_room_gain__freq_discrete_slider)
+            room_gain_slider = tk.Scale(tab1, from_=min(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]), to=max(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]), label = "Room Gain Freq. (Hz)", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"][0]) == int else 0.1, length=200, command=make_room_gain_freq_discrete_slider)
             room_gain_slider.bind("<ButtonRelease-1>", update_room_gain_freq)
             room_gain_slider.grid(column=4, row=9, padx = 20, pady = 15)
             room_gain_slope_combo=ttk.Combobox(tab1,values=[str(l) + " dB" for l in SVS_PARAMS["ROOM_GAIN_SLOPE"]["limits"]],width=7,state='readonly')
