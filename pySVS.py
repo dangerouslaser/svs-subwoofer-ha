@@ -187,7 +187,7 @@ class TX:
 
 def svs_encode(ftype, param, data=""):
     frame = FRAME_PREAMBLE + SVS_FRAME_TYPES[ftype]
-    if ftype == "PRESETLOADSAVE":
+    if ftype == "PRESETLOADSAVE" and SVS_PARAMS[param]["id"] >= 0x18:
     #FRAME FORMAT:
     # PREAMBLE (1 byte) + 
     # 	Frame type (2bytes) + 
@@ -197,7 +197,7 @@ def svs_encode(ftype, param, data=""):
     # 					Size to read/write (2 bytes) + 
         frame = frame + SVS_PARAMS[param]["id"].to_bytes(4,"little") + SVS_PARAMS[param]["offset"].to_bytes(2,"little") + SVS_PARAMS[param]["n_bytes"].to_bytes(2,"little")
 
-    elif ftype == "MEMWRITE":
+    elif ftype == "MEMWRITE" and SVS_PARAMS[param]["id"] <= 0xA:
     #FRAME FORMAT:
     # PREAMBLE (1 byte) + 
     # 	Frame type (2bytes) + 
@@ -214,7 +214,7 @@ def svs_encode(ftype, param, data=""):
             encoded_data = ((int(STEP * abs(data)) ^ mask) + (mask % 2)).to_bytes(2, 'little')
         frame = frame + SVS_PARAMS[param]["id"].to_bytes(4,"little") + SVS_PARAMS[param]["offset"].to_bytes(2,"little") + SVS_PARAMS[param]["n_bytes"].to_bytes(2,"little") + encoded_data
 
-    elif ftype == "MEMREAD":
+    elif ftype == "MEMREAD" and SVS_PARAMS[param]["id"] <= 0xA:
     #FRAME FORMAT:
     # PREAMBLE (1 byte) + 
     # 	Frame type (2bytes) + 
@@ -228,7 +228,7 @@ def svs_encode(ftype, param, data=""):
     # 									CRC (2 bytes)
         frame = frame + SVS_PARAMS[param]["id"].to_bytes(4,"little") + SVS_PARAMS[param]["offset"].to_bytes(2,"little") + SVS_PARAMS[param]["n_bytes"].to_bytes(2,"little")
 
-    elif ftype == "RESET":
+    elif ftype == "RESET" and SVS_PARAMS[param]["id"] <= 0xA:
     #FRAME FORMAT:
     # PREAMBLE (1 byte) + 
     # 	Frame type (2bytes) + 
