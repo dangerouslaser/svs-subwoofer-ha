@@ -98,6 +98,7 @@ SVS_PARAMS = {
         "PRESET1SAVE": {"id":0x1C, "offset":0x1, "limits": [], "limits_type":-1, "n_bytes":0, "reset_id": -1 },
         "PRESET2SAVE": {"id":0x1D, "offset":0x1, "limits": [], "limits_type":-1, "n_bytes":0, "reset_id": -1 },
         "PRESET3SAVE": {"id":0x1E, "offset":0x1, "limits": [], "limits_type":-1, "n_bytes":0, "reset_id": -1 }
+        #NOTE: 'group' settings can be read at once but not written at once, SW doesn't support it.
         }
 
 ###################    End SB-1000-PRO CONFIG    ###################
