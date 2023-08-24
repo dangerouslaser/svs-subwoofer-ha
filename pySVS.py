@@ -198,7 +198,7 @@ def svs_encode(ftype, param, data=""):
     # 					Size to read/write (2 bytes) + 
         frame = frame + SVS_PARAMS[param]["id"].to_bytes(4,"little") + SVS_PARAMS[param]["offset"].to_bytes(2,"little") + SVS_PARAMS[param]["n_bytes"].to_bytes(2,"little")
 
-    elif ftype == "MEMWRITE" and SVS_PARAMS[param]["id"] <= 0xA:
+    elif ftype == "MEMWRITE" and SVS_PARAMS[param]["id"] <= 0xA and SVS_PARAMS[param]["limits_type"] != "group":
     #FRAME FORMAT:
     # PREAMBLE (1 byte) + 
     # 	Frame type (2bytes) + 
