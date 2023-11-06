@@ -98,7 +98,7 @@ SVS_PARAMS = {
         "PRESET1SAVE": {"id":0x1C, "offset":0x1, "limits": [], "limits_type":-1, "n_bytes":0, "reset_id": -1 },
         "PRESET2SAVE": {"id":0x1D, "offset":0x1, "limits": [], "limits_type":-1, "n_bytes":0, "reset_id": -1 },
         "PRESET3SAVE": {"id":0x1E, "offset":0x1, "limits": [], "limits_type":-1, "n_bytes":0, "reset_id": -1 }
-        #NOTE: 'group' settings can be read at once but not written at once, SW doesn't support it.
+        #NOTE: 'group' settings can be read at once but not written at once, the sub doesn't support it.
         }
 
 ###################    End SB-1000-PRO CONFIG    ###################
@@ -253,7 +253,7 @@ def svs_encode(ftype, param, data=""):
 
     frame = frame[:3] + (len(frame) + 4).to_bytes(2,"little") + frame[3:]
     frame = frame + crc_hqx(frame,0).to_bytes(2, 'little')
-    meta = ftype + " " + param + " " + str(data)
+    meta = "%s%s%s" % (ftype, " " + str([param]), " " + str(data) if len(str(data)) > 0 else "")
     return [frame, meta]
 
 def svs_decode(frame):
