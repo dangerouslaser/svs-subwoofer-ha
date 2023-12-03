@@ -208,11 +208,18 @@ def svs_encode(ftype, param, data=""):
     # 					Size to read/write (2 bytes) + 
     # 						Data(0/X bytes) + 
     # 							CRC (2 bytes)
-        if type(data) == str:
+        if type(data) == str and SVS_PARAMS[param]["limits_type"] == 2:
             encoded_data = bytes(data.ljust(SVS_PARAMS[param]["n_bytes"], "\x00"),'utf-8')[:SVS_PARAMS[param]["n_bytes"]]
+        elif type(data) == int or type(data) == float:
+            if (SVS_PARAMS[param]["limits_type"] == 1 and data in SVS_PARAMS[param]["limits"]) or (SVS_PARAMS[param]["limits_type"] == 0 and max(SVS_PARAMS[param]["limits"]) >= data >= min(SVS_PARAMS[param]["limits"])):
+                mask = 0 if data >= 0 else 0xFFFF
+                encoded_data = ((int(STEP * abs(data)) ^ mask) + (mask % 2)).to_bytes(2, 'little')
+            else:
+                print("ERROR: Value for %s incorrect" % (param))
+                close_bt_daemon()
         else:
-            mask = 0 if data >= 0 else 0xFFFF
-            encoded_data = ((int(STEP * abs(data)) ^ mask) + (mask % 2)).to_bytes(2, 'little')
+            print("ERROR: Value type for %s incorrect" % (param))
+            close_bt_daemon()
         frame = frame + SVS_PARAMS[param]["id"].to_bytes(4,"little") + SVS_PARAMS[param]["offset"].to_bytes(2,"little") + SVS_PARAMS[param]["n_bytes"].to_bytes(2,"little") + encoded_data
 
     elif ftype == "MEMREAD" and SVS_PARAMS[param]["id"] <= 0xA:
@@ -253,7 +260,7 @@ def svs_encode(ftype, param, data=""):
 
     frame = frame[:3] + (len(frame) + 4).to_bytes(2,"little") + frame[3:]
     frame = frame + crc_hqx(frame,0).to_bytes(2, 'little')
-    meta = "%s%s%s" % (ftype, " " + str([param]), " " + str(data) if len(str(data)) > 0 else "")
+    meta = "%s%s%s" % (ftype, " " + str([param]), " "[:len(str(data))] + str(data))
     return [frame, meta]
 
 def svs_decode(frame):
@@ -376,93 +383,93 @@ def bytes2hexstr(bytes_input):
 ###################    GUI Routines    ###################
 
 def autoon_combo_changed(self):
-    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","STANDBY", autoon_values.index(autoon_combo.get()))
+    TX.BUFFER += svs_encode("MEMWRITE","STANDBY", autoon_values.index(autoon_combo.get()))
 
 def lpf_opt_changed():
     refresh_widgets()
-    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","LPF_ENABLE", int(lpf_var.get()))
+    TX.BUFFER += svs_encode("MEMWRITE","LPF_ENABLE", int(lpf_var.get()))
 
 def update_lpfilter_freq(self):
     if lpf_var.get():
     #as this callback is called when the click is released, be sure only to send svs memwrite only if lpf = on
-        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","LOW_PASS_FILTER_FREQ", lpfilter_slider.get())
+        TX.BUFFER += svs_encode("MEMWRITE","LOW_PASS_FILTER_FREQ", lpfilter_slider.get())
 
 def update_lpfilter_slope(self):
-    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","LOW_PASS_FILTER_SLOPE", int(lpfilter_slope_combo.get().replace(" dB","")))
+    TX.BUFFER += svs_encode("MEMWRITE","LOW_PASS_FILTER_SLOPE", int(lpfilter_slope_combo.get().replace(" dB","")))
 
 def peq1_opt_changed():
     refresh_widgets()
-    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ1_ENABLE", int(PEQ1_var.get()))
+    TX.BUFFER += svs_encode("MEMWRITE","PEQ1_ENABLE", int(PEQ1_var.get()))
 
 def peq2_opt_changed():
     refresh_widgets()
-    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ2_ENABLE", int(PEQ2_var.get()))
+    TX.BUFFER += svs_encode("MEMWRITE","PEQ2_ENABLE", int(PEQ2_var.get()))
 
 def peq3_opt_changed():
     refresh_widgets()
-    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ3_ENABLE", int(PEQ3_var.get()))
+    TX.BUFFER += svs_encode("MEMWRITE","PEQ3_ENABLE", int(PEQ3_var.get()))
 
 def update_peq1_freq(self):
     if PEQ1_var.get():
-        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ1_FREQ", PEQ1_freq_slider.get())
+        TX.BUFFER += svs_encode("MEMWRITE","PEQ1_FREQ", PEQ1_freq_slider.get())
 
 def update_peq1_boost(self):
     if PEQ1_var.get():
-        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ1_BOOST", PEQ1_boost_slider.get())
+        TX.BUFFER += svs_encode("MEMWRITE","PEQ1_BOOST", PEQ1_boost_slider.get())
 
 def update_peq1_qfactor(self):
     if PEQ1_var.get():
-        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ1_QFACTOR", PEQ1_qfactor_slider.get())
+        TX.BUFFER += svs_encode("MEMWRITE","PEQ1_QFACTOR", PEQ1_qfactor_slider.get())
 
 def update_peq2_freq(self):
     if PEQ2_var.get():
-        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ2_FREQ", PEQ2_freq_slider.get())
+        TX.BUFFER += svs_encode("MEMWRITE","PEQ2_FREQ", PEQ2_freq_slider.get())
 
 def update_peq2_boost(self):
     if PEQ2_var.get():
-        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ2_BOOST", PEQ2_boost_slider.get())
+        TX.BUFFER += svs_encode("MEMWRITE","PEQ2_BOOST", PEQ2_boost_slider.get())
 
 def update_peq2_qfactor(self):
     if PEQ2_var.get():
-        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ2_QFACTOR", PEQ2_qfactor_slider.get())
+        TX.BUFFER += svs_encode("MEMWRITE","PEQ2_QFACTOR", PEQ2_qfactor_slider.get())
 
 def update_peq3_freq(self):
     if PEQ3_var.get():
-        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ3_FREQ", PEQ3_freq_slider.get())
+        TX.BUFFER += svs_encode("MEMWRITE","PEQ3_FREQ", PEQ3_freq_slider.get())
 
 def update_peq3_boost(self):
     if PEQ3_var.get():
-        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ3_BOOST", PEQ3_boost_slider.get())
+        TX.BUFFER += svs_encode("MEMWRITE","PEQ3_BOOST", PEQ3_boost_slider.get())
 
 def update_peq3_qfactor(self):
     if PEQ3_var.get():
-        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PEQ3_QFACTOR", PEQ3_qfactor_slider.get())
+        TX.BUFFER += svs_encode("MEMWRITE","PEQ3_QFACTOR", PEQ3_qfactor_slider.get())
 
 def room_gain_opt_changed():
     refresh_widgets()
-    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","ROOM_GAIN_ENABLE", int(room_gain_var.get()))
+    TX.BUFFER += svs_encode("MEMWRITE","ROOM_GAIN_ENABLE", int(room_gain_var.get()))
 
 def update_room_gain_freq(self):
     if room_gain_var.get():
     #as this callback is called when the click is released, be sure only to send svs memwrite only if room_gain = on
-        TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","ROOM_GAIN_FREQ", room_gain_slider.get())
+        TX.BUFFER += svs_encode("MEMWRITE","ROOM_GAIN_FREQ", room_gain_slider.get())
 
 def update_room_gain_slope(self):
-    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","ROOM_GAIN_SLOPE", int(room_gain_slope_combo.get().replace(" dB","")))
+    TX.BUFFER += svs_encode("MEMWRITE","ROOM_GAIN_SLOPE", int(room_gain_slope_combo.get().replace(" dB","")))
 
 def make_room_gain_freq_discrete_slider(value):
     new_value = min(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"], key=lambda x:abs(x-float(value)))
     room_gain_slider.set(new_value)
 
 def update_vol(self):
-    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","VOLUME", vol_slider.get())
+    TX.BUFFER += svs_encode("MEMWRITE","VOLUME", vol_slider.get())
 
 def update_phase(self):
-    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PHASE", phase_slider.get())
+    TX.BUFFER += svs_encode("MEMWRITE","PHASE", phase_slider.get())
 
 def polarity_opt_changed():
     refresh_widgets()
-    TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","POLARITY", int(polarity_var.get()))
+    TX.BUFFER += svs_encode("MEMWRITE","POLARITY", int(polarity_var.get()))
 
 preset_combo_choice=3
 def preset_combo_changed(self):
@@ -470,13 +477,13 @@ def preset_combo_changed(self):
     preset_combo_choice=preset_values.index(preset_combo.get())
 
 def load_preset():
-    TX.BUFFER = TX.BUFFER + svs_encode("PRESETLOADSAVE","PRESET" + str(preset_combo_choice + 1) + "LOAD")
+    TX.BUFFER += svs_encode("PRESETLOADSAVE","PRESET" + str(preset_combo_choice + 1) + "LOAD")
 
 def save_preset():
     global preset_combo_choice
     if preset_combo_choice != 3:
     #avoid saving default profile
-        TX.BUFFER = TX.BUFFER + svs_encode("PRESETLOADSAVE","PRESET" + str(preset_combo_choice + 1) + "SAVE")
+        TX.BUFFER += svs_encode("PRESETLOADSAVE","PRESET" + str(preset_combo_choice + 1) + "SAVE")
 
 def rename_preset():
     global preset_combo_choice
@@ -488,7 +495,7 @@ def rename_preset():
             preset_combo.set(filtered_input)
             preset_values[preset_combo_choice] = filtered_input
             preset_combo.configure(values=preset_values)
-            TX.BUFFER = TX.BUFFER + svs_encode("MEMWRITE","PRESET" + str(preset_combo_choice + 1) + "NAME", filtered_input)
+            TX.BUFFER += svs_encode("MEMWRITE","PRESET" + str(preset_combo_choice + 1) + "NAME", filtered_input)
         else:
             preset_combo.set(preset_values[preset_combo_choice])
     else:
@@ -604,7 +611,7 @@ def show_usage():
     print('\npySVS ' + VERSION + '. Read and set SVS SB1000P Subwoofer values. By Logon84 http://github.com/logon84')
     print('Run pySVS.py without arguments to launch the GUI')
     print('USAGE: pySVS.py <-b device> <-m MAC_Address> <parameter1> <value1> <parameter2> <value2> etc...')
-    print('\n-b dev or --btdevice=dev: Specify a different BT device to use (default is hci0).')
+    print('\n-b dev or --btiface=dev: Specify a different BT interface to use (default is hci0).')
     print('-m MAC or --mac=MAC: Sets a mac address different to the one set in pySVS.py file.')
     print('-h or --help: Show this help.')
     print('-v or --version: Show program version.')
@@ -623,14 +630,14 @@ def show_usage():
     return
 
 if __name__ == "__main__":
-    VERSION = "v3.2 Beta"
+    VERSION = "v3.3 Beta"
     dev="hci0"
     if len(sys.argv[1:]) > 0:
         GUI = 0
-        param_values = {}
+        built_frames = []
         encode=0
         try:
-            options, arguments = getopt.getopt(sys.argv[1:],"b:m:hved:il:q:r:o:f:k:p:",["btdevice=","mac=","help","version","encode","decode=","info","lpf=","peq=","roomgain=","volume=", "phase=", "polarity=", "preset="])
+            options, arguments = getopt.getopt(sys.argv[1:],"b:m:hved:il:q:r:o:f:k:p:",["btiface=","mac=","help","version","encode","decode=","info","lpf=","peq=","roomgain=","volume=", "phase=", "polarity=", "preset="])
         except getopt.GetoptError as err:
             show_usage()
             print("ERROR: " + str(err) + "\n")
@@ -648,7 +655,7 @@ if __name__ == "__main__":
             elif opt in ("-v", "--version"):
                 print(VERSION)
                 sys.exit(0)
-            elif opt in ("-b", "--btdevice"):
+            elif opt in ("-b", "--btiface"):
                 dev=opt_val
             elif opt in ("-e", "--encode"):
                 encode=1
@@ -656,15 +663,15 @@ if __name__ == "__main__":
                 print(svs_decode(unhexlify(opt_val.replace("0x",""))))
                 sys.exit(0)
             elif opt in ("-i", "--info"):
-                param_values["INFO1"] = ["SUB_INFO1", None]
-                param_values["INFO2"] = ["SUB_INFO2", None]
-                param_values["INFO3"] = ["SUB_INFO3", None]
+                built_frames += svs_encode("SUB_INFO1", "")
+                built_frames += svs_encode("SUB_INFO2", "")
+                built_frames += svs_encode("SUB_INFO3", "")
             elif opt in ("-l", "--lpf"):
                 if len(opt_val.split("@")) == 3:
                     sub_params = ["LPF_ENABLE","LOW_PASS_FILTER_FREQ","LOW_PASS_FILTER_SLOPE"]
                     for i in range(0,3):
                         if len(opt_val.split("@")[i]) > 0:
-                            param_values[sub_params[i]] = ["MEMREAD",None] if opt_val.split("@")[i].upper() == 'A' else ["MEMWRITE",int(float(opt_val.split("@")[i]))]
+                            built_frames += svs_encode("MEMREAD", sub_params[i]) if opt_val.split("@")[i].upper() == 'A' else svs_encode("MEMWRITE", sub_params[i], int(float(opt_val.split("@")[i])))
                 else:
                     print("ERROR: Values for LPF incorrect")
                     print("Examples of correct values: 1@@12, 0@50@12, A@@6")
@@ -676,7 +683,7 @@ if __name__ == "__main__":
                         sub_params = ["PEQ" + peq_number + "_ENABLE","PEQ" + peq_number + "_FREQ","PEQ" + peq_number + "_BOOST","PEQ" + peq_number + "_QFACTOR"]
                         for i in range(1,5):
                             if len(opt_val.split("@")[i]) > 0:
-                                param_values[sub_params[i-1]] = ["MEMREAD",None] if opt_val.split("@")[i].upper() == 'A' else ["MEMWRITE",float(opt_val.split("@")[i])]
+                                built_frames += svs_encode("MEMREAD",sub_params[i-1]) if opt_val.split("@")[i].upper() == 'A' else svs_encode("MEMWRITE",sub_params[i-1],float(opt_val.split("@")[i]))
                     else:
                         print("ERROR: PEQ profile number incorrect")
                         sys.exit(1)
@@ -689,20 +696,20 @@ if __name__ == "__main__":
                     sub_params = ["ROOM_GAIN_ENABLE","ROOM_GAIN_FREQ","ROOM_GAIN_SLOPE"]
                     for i in range(0,3):
                         if len(opt_val.split("@")[i]) > 0:
-                            param_values[sub_params[i]] = ["MEMREAD",None] if opt_val.split("@")[i].upper() == 'A' else ["MEMWRITE",int(float(opt_val.split("@")[i]))]
+                            built_frames += svs_encode("MEMREAD",sub_params[i]) if opt_val.split("@")[i].upper() == 'A' else svs_encode("MEMWRITE",sub_params[i],int(float(opt_val.split("@")[i])))
                 else:
                     print("ERROR: Values for Roomgain incorrect")
                     print("Examples of correct values: 1@@12, 0@31@12, A@@6")
                     sys.exit(1)
             elif opt in ("-o", "--volume"):
-                param_values["VOLUME"] = ["MEMREAD",None] if opt_val.upper() == 'A' else ["MEMWRITE",int(float(opt_val))]
+                built_frames += svs_encode("MEMREAD", "VOLUME") if opt_val.upper() == 'A' else svs_encode("MEMWRITE", "VOLUME", int(float(opt_val)))
             elif opt in ("-f", "--phase"):
-                param_values["PHASE"] = ["MEMREAD",None] if opt_val.upper() == 'A' else ["MEMWRITE",int(float(opt_val))]
+                built_frames += svs_encode("MEMREAD", "PHASE") if opt_val.upper() == 'A' else svs_encode("MEMWRITE", "PHASE", int(float(opt_val)))
             elif opt in ("-k", "--polarity"):
-                param_values["POLARITY"] = ["MEMREAD",None] if opt_val.upper() == 'A' else ["MEMWRITE",int(float(opt_val))]
+                built_frames += svs_encode("MEMREAD", "POLARITY") if opt_val.upper() == 'A' else svs_encode("MEMWRITE", "POLARITY", int(float(opt_val)))
             elif opt in ("-p", "--preset"):
                 if int(opt_val) in range (1,5): 
-                    param_values["PRESET" + opt_val + "LOAD"] = ["PRESETLOADSAVE",None]
+                    built_frames += svs_encode("PRESETLOADSAVE","PRESET" + opt_val + "LOAD")
                 else:
                     print("ERROR: Incorrect preset number specified")
 
@@ -713,31 +720,15 @@ if __name__ == "__main__":
             sys.exit(2)
             raise SystemExit()
 
-        if len(param_values) > 0:
-            #validate values
-            for param in param_values.keys():
-                if param_values[param][1] is None:
-                    check = True
-                elif SVS_PARAMS[param]["limits_type"] == 2:
-                    check = type(param_values[param][1]) == str
-                elif SVS_PARAMS[param]["limits_type"] == 1:
-                    check = param_values[param][1] in SVS_PARAMS[param]["limits"]
-                elif SVS_PARAMS[param]["limits_type"] == 0:
-                    check = max(SVS_PARAMS[param]["limits"]) >= param_values[param][1] >= min(SVS_PARAMS[param]["limits"])
-                else:
-                    check = False              
-                if not check:
-                    print("ERROR: Value for %s incorrect" % (param))
-                    sys.exit(1)
-
+        if len(built_frames) > 0:
             if encode:
-                for param in param_values.keys():
-                    print(bytes2hexstr(svs_encode(param_values[param][0], param, param_values[param][1])[0]))
+                for x in built_frames:
+                    if type(x) == bytes:
+                        print(bytes2hexstr(x))
                 sys.exit(0)
             else:
                 start_bt_daemon()
-                for param in param_values.keys():
-                    TX.BUFFER=TX.BUFFER + svs_encode(param_values[param][0], param, param_values[param][1])
+                TX.BUFFER=built_frames
                 while len(TX.BUFFER) > 0: pass
                 time.sleep(0.5)
                 close_bt_daemon()
