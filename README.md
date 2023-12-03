@@ -6,10 +6,10 @@ v3: Totally rewritten. Added Polarity, Parametric EQ and Presets compatibility. 
 ![GitHub Logo](https://raw.githubusercontent.com/logon84/pySVS/main/pic.png)  
   
 ```
-    pySVS v3.0 Beta.. Read and set SVS SB1000P Subwoofer values. By Logon84 http://github.com/logon84
+    pySVS v3.3 Beta.. Read and set SVS SB1000P Subwoofer values. By Logon84 http://github.com/logon84
     Run pySVS.py without arguments to launch the GUI
     USAGE: pySVS.py <-b device> <-m MAC_Address> <parameter1> <value1> <parameter2> <value2> etc...
-    -b dev or --btdevice=dev: Specify a different BT device to use (default is hci0).
+    -b dev or --btiface=dev: Specify a different BT interface to use (default is hci0).
     -m MAC or --mac=MAC: Sets a mac address different to the one set in pySVS.py file.
     -h or --help: Show this help.
     -v or --version: Show program version.
@@ -24,7 +24,7 @@ v3: Totally rewritten. Added Polarity, Parametric EQ and Presets compatibility. 
     	-f X or --phase=X: Sets phase level to X on subwoofer.
     	-k X or --polarity=X: Sets polarity to 0(+) or 1(-) on subwoofer.
     	-p X or --preset=X: Load preset X[1..4(FACTORY DEFAULT PRESET)] on subwoofer.
-    	To ask subwoofer for one or more values, set parameter value to "A".
+    	To ask subwoofer for one or more values, set parameter value to "A"sk.
 ```
   
 The program requires bleak module installed:  
