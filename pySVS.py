@@ -330,7 +330,7 @@ def svs_decode(frame):
                         if attrib != "UNKNOWN":
                            #Validate received values
                             if SVS_PARAMS[attrib]["limits_type"] == 2:
-                                value = str(O_RAW_DATA)[2:len(str(O_RAW_DATA))-1].rstrip(str(b'\x00'))
+                                value = O_RAW_DATA.decode("utf-8").rstrip('\x00')
                                 check = True
                             else:
                                 mask = 0 if O_B_ENDIAN_DATA[offset] < 0xf000 else 0xFFFF
@@ -340,7 +340,7 @@ def svs_decode(frame):
                                 elif SVS_PARAMS[attrib]["limits_type"] == 0:
                                     check = max(SVS_PARAMS[attrib]["limits"]) >= value >= min(SVS_PARAMS[attrib]["limits"]) 
                             if check:
-                                O_VALIDATED_VALUES[attrib] = value
+                                O_VALIDATED_VALUES[attrib] = int(value) if ".0" in str(value) else value
             #read PADDING
             O_PADDING = "0x" + bytes2hexstr(frame[len(frame) - bytes_left_in_frame:len(frame)-2]) if(len(bytes2hexstr(frame[len(frame) - bytes_left_in_frame:len(frame)-2])) > 0) else ""
 
@@ -375,7 +375,7 @@ def svs_decode(frame):
     return output
 
 def bytes2hexstr(bytes_input):
-    return str(hexlify(bytes_input)).replace("\'","")[1:]
+    return hexlify(bytes_input).decode("utf-8")
     
 ###################    End SVS Frame Routines    ###################
 
@@ -629,7 +629,7 @@ def show_usage():
     return
 
 if __name__ == "__main__":
-    VERSION = "v3.3 Beta"
+    VERSION = "v3.31 Beta"
     dev="hci0"
     if len(sys.argv[1:]) > 0:
         GUI = 0
