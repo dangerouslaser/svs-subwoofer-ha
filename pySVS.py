@@ -561,49 +561,49 @@ def refresh_widgets(values_dict={}):
             preset_n = int(key.split("PRESET")[1].split("NAME")[0]) - 1
             preset_values[preset_n] = values_dict[key]
             preset_combo.configure(values=preset_values)
-    if lpf_var.get() and 'ON' not in lpf_checkbox.cget("text"):
+    if lpf_var.get():
         lpfilter_slider.configure(state='normal', takefocus=1)
         lpfilter_slope_combo.configure(state='readonly')
         lpf_checkbox.configure(text='Low Pass Filter ON (LFE Inactive)')
-    elif not(lpf_var.get()) and 'OFF' not in lpf_checkbox.cget("text"):
+    else:
         lpfilter_slider.configure(state='disabled', takefocus=0)
         lpfilter_slope_combo.configure(state='disabled')
         lpf_checkbox.configure(text='Low Pass Filter OFF (LFE Active)')
-    if PEQ1_var.get() and 'Enabled' not in PEQ1_checkbox.cget("text"):
+    if PEQ1_var.get():
         PEQ1_freq_slider.configure(state='normal', takefocus=1)
         PEQ1_boost_slider.configure(state='normal', takefocus=1)
         PEQ1_qfactor_slider.configure(state='normal', takefocus=1)
         PEQ1_checkbox.configure(text='PEQ1 Enabled')
-    elif not(PEQ1_var.get()) and 'Disabled' not in PEQ1_checkbox.cget("text"):
+    else:
         PEQ1_freq_slider.configure(state='disabled', takefocus=0)
         PEQ1_boost_slider.configure(state='disabled', takefocus=0)
         PEQ1_qfactor_slider.configure(state='disabled', takefocus=0)
         PEQ1_checkbox.configure(text='PEQ1 Disabled')
-    if PEQ2_var.get() and 'Enabled' not in PEQ2_checkbox.cget("text"):
+    if PEQ2_var.get():
         PEQ2_freq_slider.configure(state='normal', takefocus=1)
         PEQ2_boost_slider.configure(state='normal', takefocus=1)
         PEQ2_qfactor_slider.configure(state='normal', takefocus=1)
         PEQ2_checkbox.configure(text='PEQ2 Enabled')
-    elif not(PEQ2_var.get()) and 'Disabled' not in PEQ2_checkbox.cget("text"):
+    else:
         PEQ2_freq_slider.configure(state='disabled', takefocus=0)
         PEQ2_boost_slider.configure(state='disabled', takefocus=0)
         PEQ2_qfactor_slider.configure(state='disabled', takefocus=0)
         PEQ2_checkbox.configure(text='PEQ2 Disabled')
-    if PEQ3_var.get() and 'Enabled' not in PEQ3_checkbox.cget("text"):
+    if PEQ3_var.get():
         PEQ3_freq_slider.configure(state='normal', takefocus=1)
         PEQ3_boost_slider.configure(state='normal', takefocus=1)
         PEQ3_qfactor_slider.configure(state='normal', takefocus=1)
         PEQ3_checkbox.configure(text='PEQ3 Enabled')
-    elif not(PEQ3_var.get()) and 'Disabled' not in PEQ3_checkbox.cget("text"):
+    else:
         PEQ3_freq_slider.configure(state='disabled', takefocus=0)
         PEQ3_boost_slider.configure(state='disabled', takefocus=0)
         PEQ3_qfactor_slider.configure(state='disabled', takefocus=0)
         PEQ3_checkbox.configure(text='PEQ3 Disabled')
-    if room_gain_var.get() and 'ON' not in room_gain_checkbox.cget("text"):
+    if room_gain_var.get():
         room_gain_slider.configure(state='normal', takefocus=1)
         room_gain_slope_combo.configure(state='readonly')
         room_gain_checkbox.configure(text='Room Gain Compensation ON')
-    elif not(room_gain_var.get()) and 'OFF' not in room_gain_checkbox.cget("text"):
+    else:
         room_gain_slider.configure(state='disabled', takefocus=0)
         room_gain_slope_combo.configure(state='disabled')
         room_gain_checkbox.configure(text='Room Gain Compensation OFF')
