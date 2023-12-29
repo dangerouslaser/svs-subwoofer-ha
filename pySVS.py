@@ -507,47 +507,47 @@ def refresh_widgets(values_dict={}):
         elif key == "LPF_ENABLE":
             lpf_var.set(bool(values_dict[key]))
         elif key == "LOW_PASS_FILTER_FREQ":
-            lpfilter_slider.configure(state='normal', takefocus=1)
+            lpfilter_slider.configure(state='normal')
             lpfilter_slider.set(values_dict[key])
         elif key == "LOW_PASS_FILTER_SLOPE":
             lpfilter_slope_combo.current(SVS_PARAMS["LOW_PASS_FILTER_SLOPE"]["limits"].index(values_dict[key]))
         elif key == "PEQ1_ENABLE":
             PEQ1_var.set(bool(values_dict[key]))
         elif key == "PEQ1_FREQ":
-            PEQ1_freq_slider.configure(state='normal', takefocus=1)
+            PEQ1_freq_slider.configure(state='normal')
             PEQ1_freq_slider.set(values_dict[key])
         elif key == "PEQ1_BOOST":
-            PEQ1_boost_slider.configure(state='normal', takefocus=1)
+            PEQ1_boost_slider.configure(state='normal')
             PEQ1_boost_slider.set(values_dict[key])
         elif key == "PEQ1_QFACTOR":
-            PEQ1_qfactor_slider.configure(state='normal', takefocus=1)
+            PEQ1_qfactor_slider.configure(state='normal')
             PEQ1_qfactor_slider.set(values_dict[key])
         elif key == "PEQ2_ENABLE":
             PEQ2_var.set(bool(values_dict[key]))
         elif key == "PEQ2_FREQ":
-            PEQ2_freq_slider.configure(state='normal', takefocus=1)
+            PEQ2_freq_slider.configure(state='normal')
             PEQ2_freq_slider.set(values_dict[key])
         elif key == "PEQ2_BOOST":
-            PEQ2_boost_slider.configure(state='normal', takefocus=1)
+            PEQ2_boost_slider.configure(state='normal')
             PEQ2_boost_slider.set(values_dict[key])
         elif key == "PEQ2_QFACTOR":
-            PEQ2_qfactor_slider.configure(state='normal', takefocus=1)
+            PEQ2_qfactor_slider.configure(state='normal')
             PEQ2_qfactor_slider.set(values_dict[key])
         elif key == "PEQ3_ENABLE":
             PEQ3_var.set(bool(values_dict[key]))
         elif key == "PEQ3_FREQ":
-            PEQ3_freq_slider.configure(state='normal', takefocus=1)
+            PEQ3_freq_slider.configure(state='normal')
             PEQ3_freq_slider.set(values_dict[key])
         elif key == "PEQ3_BOOST":
-            PEQ3_boost_slider.configure(state='normal', takefocus=1)
+            PEQ3_boost_slider.configure(state='normal')
             PEQ3_boost_slider.set(values_dict[key])
         elif key == "PEQ3_QFACTOR":
-            PEQ3_qfactor_slider.configure(state='normal', takefocus=1)
+            PEQ3_qfactor_slider.configure(state='normal')
             PEQ3_qfactor_slider.set(values_dict[key])
         elif key == "ROOM_GAIN_ENABLE":
             room_gain_var.set(bool(values_dict[key]))
         elif key == "ROOM_GAIN_FREQ":
-            room_gain_slider.configure(state='normal', takefocus=1)
+            room_gain_slider.configure(state='normal')
             room_gain_slider.set(values_dict[key])
         elif key == "ROOM_GAIN_SLOPE":
             room_gain_slope_combo.current(SVS_PARAMS["ROOM_GAIN_SLOPE"]["limits"].index(values_dict[key]))
@@ -607,10 +607,10 @@ def refresh_widgets(values_dict={}):
         room_gain_slider.configure(state='disabled', takefocus=0)
         room_gain_slope_combo.configure(state='disabled')
         room_gain_checkbox.configure(text='Room Gain Compensation OFF')
-    if not(polarity_var.get()) and '(+)' not in polarity_checkbox.cget("text"):
-        polarity_checkbox.configure(text='Polarity (+)')
-    elif polarity_var.get() and '(-)' not in polarity_checkbox.cget("text"):
+    if polarity_var.get():
         polarity_checkbox.configure(text='Polarity (-)')
+    else:
+        polarity_checkbox.configure(text='Polarity (+)')
     return
 
 ###################    End GUI Routines    ###################
