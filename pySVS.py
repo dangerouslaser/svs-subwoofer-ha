@@ -459,10 +459,9 @@ def update_room_gain_freq(event):
                 #going here means we weren't dragging the slider but clicked the scale to move the slider to a new position
                 if click_release_value > room_gain_slider.get():
                     next_index = (current_index + 1) if current_index < (len(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]) - 1) else len(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]) - 1
-                    room_gain_slider.set(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"][next_index])
                 else:
                     next_index = (current_index - 1) if current_index > 0 else 0
-                    room_gain_slider.set(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"][next_index])
+                room_gain_slider.set(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"][next_index])
         elif event.keysym == 'Right': #KeyRelease
             next_index = (current_index + 1) if current_index < (len(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]) - 1) else len(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]) - 1
             room_gain_slider.set(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"][next_index])
@@ -657,6 +656,11 @@ def show_usage():
     print('\tTo ask subwoofer for one or more values, set parameter value to \"A\"sk.\n')
     return
 
+def multibinder(widget, function):
+    for event in ["<ButtonRelease-1>", "<ButtonRelease-2>", "<KeyRelease-Left>", "<KeyRelease-Right>"]:
+        widget.bind(event, function)
+    return
+
 if __name__ == "__main__":
     VERSION = "v3.4 Beta"
     dev="hci0"
@@ -691,9 +695,7 @@ if __name__ == "__main__":
                 print(svs_decode(unhexlify(opt_val.replace("0x",""))))
                 sys.exit(0)
             elif opt in ("-i", "--info"):
-                built_frames += svs_encode("SUB_INFO1", "")
-                built_frames += svs_encode("SUB_INFO2", "")
-                built_frames += svs_encode("SUB_INFO3", "")
+                built_frames += svs_encode("SUB_INFO1", "") + svs_encode("SUB_INFO2", "") + svs_encode("SUB_INFO3", "")
             elif opt in ("-l", "--lpf"):
                 if len(opt_val.split("@")) == 3:
                     sub_params = ["LOW_PASS_FILTER_ENABLE","LOW_PASS_FILTER_FREQ","LOW_PASS_FILTER_SLOPE"]
@@ -790,24 +792,15 @@ if __name__ == "__main__":
 
             vol_slider = tk.Scale(tab1, from_=min(SVS_PARAMS["VOLUME"]["limits"]), to=max(SVS_PARAMS["VOLUME"]["limits"]), label = "Volume (dB)", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["PHASE"]["limits"][0]) == int else 0.1, length=200, takefocus=1)
             vol_slider.grid(column=4, row=3, padx = 20, pady = 15)
-            vol_slider.bind("<ButtonRelease-1>", update_vol)
-            vol_slider.bind("<ButtonRelease-2>", update_vol)
-            vol_slider.bind("<KeyRelease-Left>", update_vol)
-            vol_slider.bind("<KeyRelease-Right>", update_vol)
+            multibinder(vol_slider, update_vol)
 
             phase_slider = tk.Scale(tab1, from_=min(SVS_PARAMS["PHASE"]["limits"]), to=max(SVS_PARAMS["PHASE"]["limits"]), label = "Phase (°)", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["PHASE"]["limits"][0]) == int else 0.1, length=200, takefocus=1)
             phase_slider.grid(column=4, row=5, padx = 20, pady = 15)
-            phase_slider.bind("<ButtonRelease-1>", update_phase)
-            phase_slider.bind("<ButtonRelease-2>", update_phase)
-            phase_slider.bind("<KeyRelease-Left>", update_phase)
-            phase_slider.bind("<KeyRelease-Right>", update_phase)
+            multibinder(phase_slider, update_phase)
 
             lpfilter_slider = tk.Scale(tab1, from_=min(SVS_PARAMS["LOW_PASS_FILTER_FREQ"]["limits"]), to=max(SVS_PARAMS["LOW_PASS_FILTER_FREQ"]["limits"]), label = "Low Pass Filter Freq. (Hz)", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["LOW_PASS_FILTER_FREQ"]["limits"][0]) == int else 0.1, length=200, takefocus=1)
             lpfilter_slider.grid(column=4, row=7, padx = 20, pady = 15)
-            lpfilter_slider.bind("<ButtonRelease-1>", update_lpfilter_freq)
-            lpfilter_slider.bind("<ButtonRelease-2>", update_lpfilter_freq)
-            lpfilter_slider.bind("<KeyRelease-Left>", update_lpfilter_freq)
-            lpfilter_slider.bind("<KeyRelease-Right>", update_lpfilter_freq)
+            multibinder(lpfilter_slider, update_lpfilter_freq)
             lpfilter_slope_combo=ttk.Combobox(tab1,values=[str(l) + " dB" for l in SVS_PARAMS["LOW_PASS_FILTER_SLOPE"]["limits"]],width=7,state='readonly')
             lpfilter_slope_combo.grid(sticky="W",column=5, row=7)
             lpfilter_slope_combo.bind("<<ComboboxSelected>>", update_lpfilter_slope)
@@ -816,10 +809,7 @@ if __name__ == "__main__":
             lpf_checkbox.place(x=325,y=218)
 
             room_gain_slider = tk.Scale(tab1, from_=min(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]), to=max(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]), label = "Room Gain Freq. (Hz)", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"][0]) == int else 0.1, length=200, takefocus=1, command=make_room_gain_freq_discrete_slider)
-            room_gain_slider.bind("<ButtonRelease-1>", update_room_gain_freq)
-            room_gain_slider.bind("<ButtonRelease-2>", update_room_gain_freq)
-            room_gain_slider.bind("<KeyRelease-Left>", update_room_gain_freq)
-            room_gain_slider.bind("<KeyRelease-Right>", update_room_gain_freq)
+            multibinder(room_gain_slider, update_room_gain_freq)
             room_gain_slider.grid(column=4, row=9, padx = 20, pady = 15)
             room_gain_slope_combo=ttk.Combobox(tab1,values=[str(l) + " dB" for l in SVS_PARAMS["ROOM_GAIN_SLOPE"]["limits"]],width=7,state='readonly')
             room_gain_slope_combo.grid(sticky="W",column=5, row=9)
@@ -841,66 +831,39 @@ if __name__ == "__main__":
             PEQ1_checkbox = ttk.Checkbutton(tab2, variable=PEQ1_var, text='PEQ1', command=peq1_opt_changed)
             PEQ1_checkbox.place(x=40,y=15)
             PEQ1_freq_slider = tk.Scale(tab2, from_=min(SVS_PARAMS["PEQ1_FREQ"]["limits"]), to=max(SVS_PARAMS["PEQ1_FREQ"]["limits"]), label = "Freq (Hz)", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["PEQ1_FREQ"]["limits"][0]) == int else 0.1, length=100, takefocus=1)
-            PEQ1_freq_slider.bind("<ButtonRelease-1>", update_peq1_freq)
-            PEQ1_freq_slider.bind("<ButtonRelease-2>", update_peq1_freq)
-            PEQ1_freq_slider.bind("<KeyRelease-Left>", update_peq1_freq)
-            PEQ1_freq_slider.bind("<KeyRelease-Right>", update_peq1_freq)
+            multibinder(PEQ1_freq_slider, update_peq1_freq)
             PEQ1_freq_slider.grid(column=7, row=3, padx = 35, pady = 35)
             PEQ1_boost_slider = tk.Scale(tab2, from_=min(SVS_PARAMS["PEQ1_BOOST"]["limits"]), to=max(SVS_PARAMS["PEQ1_BOOST"]["limits"]), label = "Boost (dB)", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["PEQ1_BOOST"]["limits"][0]) == int else 0.1, length=100, takefocus=1)
-            PEQ1_boost_slider.bind("<ButtonRelease-1>", update_peq1_boost)
-            PEQ1_boost_slider.bind("<ButtonRelease-2>", update_peq1_boost)
-            PEQ1_boost_slider.bind("<KeyRelease-Left>", update_peq1_boost)
-            PEQ1_boost_slider.bind("<KeyRelease-Right>", update_peq1_boost)
+            multibinder(PEQ1_boost_slider, update_peq1_boost)
             PEQ1_boost_slider.grid(column=7, row=5, padx = 20, pady = 15)
             PEQ1_qfactor_slider = tk.Scale(tab2, from_=min(SVS_PARAMS["PEQ1_QFACTOR"]["limits"]), to=max(SVS_PARAMS["PEQ1_QFACTOR"]["limits"]), label = "Q-Factor", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["PEQ1_QFACTOR"]["limits"][0]) == int else 0.1, length=100, takefocus=1)
-            PEQ1_qfactor_slider.bind("<ButtonRelease-1>", update_peq1_qfactor)
-            PEQ1_qfactor_slider.bind("<ButtonRelease-2>", update_peq1_qfactor)
-            PEQ1_qfactor_slider.bind("<KeyRelease-Left>", update_peq1_qfactor)
-            PEQ1_qfactor_slider.bind("<KeyRelease-Right>", update_peq1_qfactor)
+            multibinder(PEQ1_qfactor_slider, update_peq1_qfactor)
             PEQ1_qfactor_slider.grid(column=7, row=7, padx = 20, pady = 35)
 
             PEQ2_var = tk.IntVar(value=0)
             PEQ2_checkbox = ttk.Checkbutton(tab2, variable=PEQ2_var, text='PEQ2', command=peq2_opt_changed)
             PEQ2_checkbox.place(x=215,y=15)
             PEQ2_freq_slider = tk.Scale(tab2, from_=min(SVS_PARAMS["PEQ2_FREQ"]["limits"]), to=max(SVS_PARAMS["PEQ2_FREQ"]["limits"]), label = "Freq (Hz)", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["PEQ2_FREQ"]["limits"][0]) == int else 0.1, length=100, takefocus=1)
-            PEQ2_freq_slider.bind("<ButtonRelease-1>", update_peq2_freq)
-            PEQ2_freq_slider.bind("<ButtonRelease-2>", update_peq2_freq)
-            PEQ2_freq_slider.bind("<KeyRelease-Left>", update_peq2_freq)
-            PEQ2_freq_slider.bind("<KeyRelease-Right>", update_peq2_freq)
+            multibinder(PEQ2_freq_slider, update_peq2_freq)
             PEQ2_freq_slider.grid(column=8, row=3, padx = 35, pady = 35)
             PEQ2_boost_slider = tk.Scale(tab2, from_=min(SVS_PARAMS["PEQ2_BOOST"]["limits"]), to=max(SVS_PARAMS["PEQ2_BOOST"]["limits"]), label = "Boost (dB)", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["PEQ2_BOOST"]["limits"][0]) == int else 0.1, length=100, takefocus=1)
-            PEQ2_boost_slider.bind("<ButtonRelease-1>", update_peq2_boost)
-            PEQ2_boost_slider.bind("<ButtonRelease-2>", update_peq2_boost)
-            PEQ2_boost_slider.bind("<KeyRelease-Left>", update_peq2_boost)
-            PEQ2_boost_slider.bind("<KeyRelease-Right>", update_peq2_boost)
+            multibinder(PEQ2_boost_slider, update_peq2_boost)
             PEQ2_boost_slider.grid(column=8, row=5, padx = 20, pady = 15)
             PEQ2_qfactor_slider = tk.Scale(tab2, from_=min(SVS_PARAMS["PEQ2_QFACTOR"]["limits"]), to=max(SVS_PARAMS["PEQ2_QFACTOR"]["limits"]), label = "Q-Factor", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["PEQ2_QFACTOR"]["limits"][0]) == int else 0.1, length=100, takefocus=1)
-            PEQ2_qfactor_slider.bind("<ButtonRelease-1>", update_peq2_qfactor)
-            PEQ2_qfactor_slider.bind("<ButtonRelease-2>", update_peq2_qfactor)
-            PEQ2_qfactor_slider.bind("<KeyRelease-Left>", update_peq2_qfactor)
-            PEQ2_qfactor_slider.bind("<KeyRelease-Right>", update_peq2_qfactor)
+            multibinder(PEQ2_qfactor_slider, update_peq2_qfactor)
             PEQ2_qfactor_slider.grid(column=8, row=7, padx = 20, pady = 35)
 
             PEQ3_var = tk.IntVar(value=0)
             PEQ3_checkbox = ttk.Checkbutton(tab2, variable=PEQ3_var, text='PEQ3', command=peq3_opt_changed)
             PEQ3_checkbox.place(x=390,y=15)
             PEQ3_freq_slider = tk.Scale(tab2, from_=min(SVS_PARAMS["PEQ3_FREQ"]["limits"]), to=max(SVS_PARAMS["PEQ3_FREQ"]["limits"]), label = "Freq (Hz)", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["PEQ3_FREQ"]["limits"][0]) == int else 0.1, length=100, takefocus=1)
-            PEQ3_freq_slider.bind("<ButtonRelease-1>", update_peq3_freq)
-            PEQ3_freq_slider.bind("<ButtonRelease-2>", update_peq3_freq)
-            PEQ3_freq_slider.bind("<KeyRelease-Left>", update_peq3_freq)
-            PEQ3_freq_slider.bind("<KeyRelease-Right>", update_peq3_freq)
+            multibinder(PEQ3_freq_slider, update_peq3_freq)
             PEQ3_freq_slider.grid(column=9, row=3, padx = 35, pady = 35)
             PEQ3_boost_slider = tk.Scale(tab2, from_=min(SVS_PARAMS["PEQ3_BOOST"]["limits"]), to=max(SVS_PARAMS["PEQ3_BOOST"]["limits"]), label = "Boost (dB)", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["PEQ3_BOOST"]["limits"][0]) == int else 0.1, length=100, takefocus=1)
-            PEQ3_boost_slider.bind("<ButtonRelease-1>", update_peq3_boost)
-            PEQ3_boost_slider.bind("<ButtonRelease-2>", update_peq3_boost)
-            PEQ3_boost_slider.bind("<KeyRelease-Left>", update_peq3_boost)
-            PEQ3_boost_slider.bind("<KeyRelease-Right>", update_peq3_boost)
+            multibinder(PEQ3_boost_slider, update_peq3_boost)
             PEQ3_boost_slider.grid(column=9, row=5, padx = 20, pady = 15)
             PEQ3_qfactor_slider = tk.Scale(tab2, from_=min(SVS_PARAMS["PEQ3_QFACTOR"]["limits"]), to=max(SVS_PARAMS["PEQ3_QFACTOR"]["limits"]), label = "Q-Factor", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["PEQ3_QFACTOR"]["limits"][0]) == int else 0.1, length=100, takefocus=1)
-            PEQ3_qfactor_slider.bind("<ButtonRelease-1>", update_peq3_qfactor)
-            PEQ3_qfactor_slider.bind("<ButtonRelease-2>", update_peq3_qfactor)
-            PEQ3_qfactor_slider.bind("<KeyRelease-Left>", update_peq3_qfactor)
-            PEQ3_qfactor_slider.bind("<KeyRelease-Right>", update_peq3_qfactor)
+            multibinder(PEQ3_qfactor_slider, update_peq3_qfactor)
             PEQ3_qfactor_slider.grid(column=9, row=7, padx = 20, pady = 35)
 
             preset_label = ttk.Label(tab3, text='Presets:')
