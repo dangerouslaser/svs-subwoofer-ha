@@ -458,15 +458,15 @@ def update_room_gain_freq(event):
             if abs(room_gain_slider.get() - click_release_value) > 3:
                 #going here means we weren't dragging the slider but clicked the scale to move the slider to a new position
                 if click_release_value > room_gain_slider.get():
-                    next_index = (current_index + 1) if current_index < (len(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]) - 1) else len(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]) - 1
+                    next_index = min(current_index + 1, len(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]) - 1)
                 else:
-                    next_index = (current_index - 1) if current_index > 0 else 0
+                    next_index = max(current_index - 1, 0)
                 room_gain_slider.set(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"][next_index])
         elif event.keysym == 'Right': #KeyRelease
-            next_index = (current_index + 1) if current_index < (len(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]) - 1) else len(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]) - 1
+            next_index = min(current_index + 1, len(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]) - 1)
             room_gain_slider.set(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"][next_index])
         elif event.keysym == 'Left': #KeyRelease
-            next_index = (current_index - 1) if current_index > 0 else 0
+            next_index = max(current_index - 1, 0)
             room_gain_slider.set(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"][next_index])
         TX.BUFFER += svs_encode("MEMWRITE","ROOM_GAIN_FREQ", room_gain_slider.get())
 
