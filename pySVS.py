@@ -14,7 +14,6 @@ import tkinter as tk
 from tkinter import ttk
 import traceback
 
-
 #EDIT THIS VALUE#####################
 SVS_MAC_ADDRESS = "01:23:45:67:89:AB"
 #####################################
@@ -22,21 +21,21 @@ SVS_MAC_ADDRESS = "01:23:45:67:89:AB"
 ###################    SB-1000-PRO CONFIG    ###################
 
 #SERV01 = "0000fef6-0000-1000-8000-00805f9b34fb"
-#CHAR01 = "005f0005-2ff2-4ed5-b045-4c7463617865"
-#CHAR02 = "005f0004-2ff2-4ed5-b045-4c7463617865"
-#CHAR03 = "005f0003-2ff2-4ed5-b045-4c7463617865"
-#CHAR04 = "005f0002-2ff2-4ed5-b045-4c7463617865"
+#CHAR11 = "005f0005-2ff2-4ed5-b045-4c7463617865"
+#CHAR12 = "005f0004-2ff2-4ed5-b045-4c7463617865"
+#CHAR13 = "005f0003-2ff2-4ed5-b045-4c7463617865"
+#CHAR14 = "005f0002-2ff2-4ed5-b045-4c7463617865"
 
 #SERV02 = "1fee6acf-a826-4e37-9635-4d8a01642c5d"
-#CHAR11 = "7691b78a-9015-4367-9b95-fc631c412cc6"  #change device name
-CHAR12 = "6409d79d-cd28-479c-a639-92f9e1948b43"  #notification handle 0x12
+#CHAR21 = "7691b78a-9015-4367-9b95-fc631c412cc6"
+CHAR22 = "6409d79d-cd28-479c-a639-92f9e1948b43"
 
 #SERV03 = "0000180a-0000-1000-8000-00805f9b34fb"
-#CHAR21 = "00002a29-0000-1000-8000-00805f9b34fb"
-#CHAR22 = "00002a25-0000-1000-8000-00805f9b34fb"
+#CHAR31 = "00002a29-0000-1000-8000-00805f9b34fb"
+#CHAR32 = "00002a25-0000-1000-8000-00805f9b34fb"
 
 #SERV04 = "00001801-0000-1000-8000-00805f9b34fb"
-#CHAR31 = "00002a05-0000-1000-8000-00805f9b34fb"
+#CHAR41 = "00002a05-0000-1000-8000-00805f9b34fb"
 
 STEP = 10
 FRAME_PREAMBLE = b'\xaa'
@@ -138,7 +137,7 @@ def start_bt_daemon():
 
 def bleak_device():
     ADDRESS = (SVS_MAC_ADDRESS if platform.system() != "Darwin" else "B9EA5233-37EF-4DD6-87A8-2A875E821C46")
-    asyncio.run(TX_thread(ADDRESS, CHAR12))
+    asyncio.run(TX_thread(ADDRESS, CHAR22))
 
 async def TX_thread(address, char_uuid):
     try:
@@ -207,18 +206,18 @@ def svs_encode(ftype, param, data=""):
     # 					Size to read/write (2 bytes) + 
     # 						Data(0/X bytes) + 
     # 							CRC (2 bytes)
-        if type(data) == str and SVS_PARAMS[param]["limits_type"] == 2:
+        if type(data) == str and len(data) > 0 and SVS_PARAMS[param]["limits_type"] == 2:
             encoded_data = bytes(data.ljust(SVS_PARAMS[param]["n_bytes"], "\x00"),'utf-8')[:SVS_PARAMS[param]["n_bytes"]]
-        elif type(data) == int or type(data) == float:
+        elif type(data) in [int, float]:
             if (SVS_PARAMS[param]["limits_type"] == 1 and data in SVS_PARAMS[param]["limits"]) or (SVS_PARAMS[param]["limits_type"] == 0 and max(SVS_PARAMS[param]["limits"]) >= data >= min(SVS_PARAMS[param]["limits"])):
                 mask = 0 if data >= 0 else 0xFFFF
                 encoded_data = ((int(STEP * abs(data)) ^ mask) + (mask % 2)).to_bytes(2, 'little')
             else:
-                print("ERROR: Value for %s incorrect" % (param))
-                close_bt_daemon()
+                print("ERROR: Value for %s out of limits" % (param))
+                return [b'',""]
         else:
-            print("ERROR: Value type for %s incorrect" % (param))
-            close_bt_daemon()
+            print("ERROR: Value for %s incorrect" % (param))
+            return [b'',""]
         frame = SVS_PARAMS[param]["id"].to_bytes(4,"little") + SVS_PARAMS[param]["offset"].to_bytes(2,"little") + SVS_PARAMS[param]["n_bytes"].to_bytes(2,"little") + encoded_data
 
     elif ftype == "MEMREAD" and SVS_PARAMS[param]["id"] <= 0xA:
@@ -255,7 +254,7 @@ def svs_encode(ftype, param, data=""):
 
     else:
         print("ERROR: Unknown frame type to encode. Can only encode DEV-to-SVS frame types.")
-        close_bt_daemon()
+        return [b'',""]
 
     frame = FRAME_PREAMBLE + SVS_FRAME_TYPES[ftype] + (len(frame) + 7).to_bytes(2,"little") + frame
     frame = frame + crc_hqx(frame,0).to_bytes(2, 'little')
@@ -455,18 +454,11 @@ def update_room_gain_freq(event):
         if event.type == "5": #Button1Release
             res = (max(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]) - min(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]))/room_gain_slider.cget("length")
             click_release_value = min(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]) + res * event.x
-            if abs(room_gain_slider.get() - click_release_value) > 3:
-                #going here means we weren't dragging the slider but clicked the scale to move the slider to a new position
-                if click_release_value > room_gain_slider.get():
-                    next_index = min(current_index + 1, len(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]) - 1)
-                else:
-                    next_index = max(current_index - 1, 0)
+            if abs(room_gain_slider.get() - click_release_value) > 3: # we were,'t dragging the slider but clicking the scale
+                next_index = min(current_index + 1, len(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]) - 1) if click_release_value > room_gain_slider.get() else max(current_index - 1, 0)
                 room_gain_slider.set(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"][next_index])
-        elif event.keysym == 'Right': #KeyRelease
-            next_index = min(current_index + 1, len(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]) - 1)
-            room_gain_slider.set(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"][next_index])
-        elif event.keysym == 'Left': #KeyRelease
-            next_index = max(current_index - 1, 0)
+        elif event.keysym in ['Left', 'Right']: #KeyRelease
+            next_index = min(current_index + 1, len(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"]) - 1) if event.keysym == 'Right' else max(current_index - 1, 0)
             room_gain_slider.set(SVS_PARAMS["ROOM_GAIN_FREQ"]["limits"][next_index])
         TX.BUFFER += svs_encode("MEMWRITE","ROOM_GAIN_FREQ", room_gain_slider.get())
 
@@ -505,9 +497,8 @@ def rename_preset():
     global preset_combo_choice
     if preset_combo_choice != 3:
     #avoid renaming default profile
-        filtered_input = ''.join([char for char in preset_combo.get().upper() if char.isalnum()])
-        filtered_input = filtered_input[:SVS_PARAMS["PRESET" + str(preset_combo_choice + 1) + "NAME"]["n_bytes"]]
-        if filtered_input not in preset_values:
+        filtered_input = string_isalnumify(preset_combo.get())[:SVS_PARAMS["PRESET" + str(preset_combo_choice + 1) + "NAME"]["n_bytes"]]
+        if filtered_input not in preset_values and len(filtered_input) > 0:
             preset_combo.set(filtered_input)
             preset_values[preset_combo_choice] = filtered_input
             preset_combo.configure(values=preset_values)
@@ -645,6 +636,7 @@ def show_usage():
     print('-e or --encode: Just print built frames based on param values.')
     print('-d FRAME or --decode=FRAME: Decode values of a frame.')
     print('-i or --info: Show subwoofer info.')
+    print('-s ftype@param@data or --send ftype@param@data: Send svs_encode frame type, param and data.')
     print('\nPARAMETER LIST:')
     print('\t-l X@Y@Z or --lpf=X@Y@Z: Sets Low Pass Filter to X[0(OFF),1(ON)], Y[freq] and Z[slope].')
     print('\t-q V@W@X@Y@Z or --peq=V@W@X@Y@Z: Sets PEQ V[1..3], W[0(OFF),1(ON)], X[freq], Y[boost] and Z[Qfactor].')
@@ -661,15 +653,18 @@ def multibinder(widget, function):
         widget.bind(event, function)
     return
 
+def string_isalnumify(in_string):
+    return ''.join([char for char in in_string.upper() if char.isalnum()])
+
 if __name__ == "__main__":
-    VERSION = "v3.4 Beta"
+    VERSION = "v3.5 Final"
     dev="hci0"
     if len(sys.argv[1:]) > 0:
         GUI = 0
         built_frames = []
         encode=0
         try:
-            options, arguments = getopt.getopt(sys.argv[1:],"b:m:hved:il:q:r:o:f:k:p:",["btiface=","mac=","help","version","encode","decode=","info","lpf=","peq=","roomgain=","volume=", "phase=", "polarity=", "preset="])
+            options, arguments = getopt.getopt(sys.argv[1:],"b:m:hved:is:l:q:r:o:f:k:p:",["btiface=","mac=","help","version","encode","decode=","info", "send=","lpf=","peq=","roomgain=","volume=", "phase=", "polarity=", "preset="])
         except getopt.GetoptError as err:
             show_usage()
             print("ERROR: " + str(err) + "\n")
@@ -696,6 +691,11 @@ if __name__ == "__main__":
                 sys.exit(0)
             elif opt in ("-i", "--info"):
                 built_frames += svs_encode("SUB_INFO1", "") + svs_encode("SUB_INFO2", "") + svs_encode("SUB_INFO3", "")
+            elif opt in ("-s", "--send"):
+                data = opt_val.split("@",2)[2]
+                if len(data) > 0:
+                    data = string_isalnumify(data) if SVS_PARAMS[opt_val.split("@")[1]]["limits_type"] == 2 else float(data)
+                built_frames += svs_encode(opt_val.split("@")[0], opt_val.split("@")[1], data)
             elif opt in ("-l", "--lpf"):
                 if len(opt_val.split("@")) == 3:
                     sub_params = ["LOW_PASS_FILTER_ENABLE","LOW_PASS_FILTER_FREQ","LOW_PASS_FILTER_SLOPE"]
@@ -842,7 +842,7 @@ if __name__ == "__main__":
 
             PEQ2_var = tk.IntVar(value=0)
             PEQ2_checkbox = ttk.Checkbutton(tab2, variable=PEQ2_var, text='PEQ2', command=peq2_opt_changed)
-            PEQ2_checkbox.place(x=215,y=15)
+            PEQ2_checkbox.place(x=214,y=15)
             PEQ2_freq_slider = tk.Scale(tab2, from_=min(SVS_PARAMS["PEQ2_FREQ"]["limits"]), to=max(SVS_PARAMS["PEQ2_FREQ"]["limits"]), label = "Freq (Hz)", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["PEQ2_FREQ"]["limits"][0]) == int else 0.1, length=100, takefocus=1)
             multibinder(PEQ2_freq_slider, update_peq2_freq)
             PEQ2_freq_slider.grid(column=8, row=3, padx = 35, pady = 35)
@@ -855,7 +855,7 @@ if __name__ == "__main__":
 
             PEQ3_var = tk.IntVar(value=0)
             PEQ3_checkbox = ttk.Checkbutton(tab2, variable=PEQ3_var, text='PEQ3', command=peq3_opt_changed)
-            PEQ3_checkbox.place(x=390,y=15)
+            PEQ3_checkbox.place(x=388,y=15)
             PEQ3_freq_slider = tk.Scale(tab2, from_=min(SVS_PARAMS["PEQ3_FREQ"]["limits"]), to=max(SVS_PARAMS["PEQ3_FREQ"]["limits"]), label = "Freq (Hz)", orient=tk.HORIZONTAL, resolution=1 if type(SVS_PARAMS["PEQ3_FREQ"]["limits"][0]) == int else 0.1, length=100, takefocus=1)
             multibinder(PEQ3_freq_slider, update_peq3_freq)
             PEQ3_freq_slider.grid(column=9, row=3, padx = 35, pady = 35)
