@@ -37,7 +37,6 @@ CHAR22 = "6409d79d-cd28-479c-a639-92f9e1948b43"
 #SERV04 = "00001801-0000-1000-8000-00805f9b34fb"
 #CHAR41 = "00002a05-0000-1000-8000-00805f9b34fb"
 
-STEP = 10
 FRAME_PREAMBLE = b'\xaa'
 
 SVS_FRAME_TYPES = {
@@ -211,7 +210,7 @@ def svs_encode(ftype, param, data=""):
         elif type(data) in [int, float]:
             if (SVS_PARAMS[param]["limits_type"] == 1 and data in SVS_PARAMS[param]["limits"]) or (SVS_PARAMS[param]["limits_type"] == 0 and max(SVS_PARAMS[param]["limits"]) >= data >= min(SVS_PARAMS[param]["limits"])):
                 mask = 0 if data >= 0 else 0xFFFF
-                encoded_data = ((int(STEP * abs(data)) ^ mask) + (mask % 2)).to_bytes(2, 'little')
+                encoded_data = ((int(10 * abs(data)) ^ mask) + (mask % 2)).to_bytes(2, 'little')
             else:
                 print("ERROR: Value for %s out of limits" % (param))
                 return [b'',""]
@@ -333,7 +332,7 @@ def svs_decode(frame):
                                 check = True
                             else:
                                 mask = 0 if O_B_ENDIAN_DATA[offset] < 0xf000 else 0xFFFF
-                                value = ((-1)**(mask % 2)) * ((O_B_ENDIAN_DATA[offset] - (mask % 2)) ^ mask)/STEP
+                                value = ((-1)**(mask % 2)) * ((O_B_ENDIAN_DATA[offset] - (mask % 2)) ^ mask)/10
                                 if SVS_PARAMS[attrib]["limits_type"] == 1:
                                     check = value in SVS_PARAMS[attrib]["limits"]
                                 elif SVS_PARAMS[attrib]["limits_type"] == 0:
@@ -695,6 +694,7 @@ if __name__ == "__main__":
                 data = opt_val.split("@",2)[2]
                 if len(data) > 0:
                     data = string_isalnumify(data) if SVS_PARAMS[opt_val.split("@")[1]]["limits_type"] == 2 else float(data)
+                    data = int(data) if type(min(SVS_PARAMS[opt_val.split("@")[1]]["limits"])) == int else data
                 built_frames += svs_encode(opt_val.split("@")[0], opt_val.split("@")[1], data)
             elif opt in ("-l", "--lpf"):
                 if len(opt_val.split("@")) == 3:
