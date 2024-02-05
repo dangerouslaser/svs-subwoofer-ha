@@ -695,7 +695,7 @@ if __name__ == "__main__":
                 if len(data) > 0:
                     data = string_isalnumify(data) if SVS_PARAMS[opt_val.split("@")[1]]["limits_type"] == 2 else float(data)
                     data = int(data) if type(SVS_PARAMS[opt_val.split("@")[1]]["limits"][0]) == int else data
-                built_frames += svs_encode(opt_val.split("@")[0], opt_val.split("@")[1], data)
+                built_frames += svs_encode(opt_val.split("@")[0].upper(), opt_val.split("@")[1].upper(), data)
             elif opt in ("-l", "--lpf"):
                 if len(opt_val.split("@")) == 3:
                     sub_params = ["LOW_PASS_FILTER_ENABLE","LOW_PASS_FILTER_FREQ","LOW_PASS_FILTER_SLOPE"]
