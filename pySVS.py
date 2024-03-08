@@ -127,7 +127,7 @@ def RX_thread(handle, data):
         if GUI:
             print("<- Received %s %s [%s]" % (decoded_frame["FRAME_TYPE"][1], str(decoded_frame["ATTRIBUTES"]), bytes2hexstr(PARTIAL_FRAME)))
             refresh_widgets(decoded_frame["VALIDATED_VALUES"])
-        elif "STANDBY" not in decoded_frame["ATTRIBUTES"]:
+        elif not(len(decoded_frame["VALIDATED_VALUES"]) == 1 and "STANDBY" in decoded_frame["ATTRIBUTES"]):
             print(decoded_frame["VALIDATED_VALUES"])
 
 def start_bt_daemon():
@@ -752,8 +752,8 @@ if __name__ == "__main__":
 
         if len(built_frames) > 0:
             if encode:
-                for x in built_frames:
-                    print(bytes2hexstr(x)) if type(x) == bytes else print("", end="")
+                for i in range(0,len(built_frames),2):
+                    print(bytes2hexstr(built_frames[i]))
                 sys.exit(0)
             else:
                 start_bt_daemon()
