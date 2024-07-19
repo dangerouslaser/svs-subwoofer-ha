@@ -257,7 +257,7 @@ def svs_encode(ftype, param, data=""):
 
     frame = FRAME_PREAMBLE + SVS_FRAME_TYPES[ftype] + (len(frame) + 7).to_bytes(2,"little") + frame
     frame = frame + crc_hqx(frame,0).to_bytes(2, 'little')
-    meta = "%s%s%s" % (ftype, " " + str([param]), " "[:len(str(data))] + str(data))
+    meta = ftype + " " + str([param]) + " "[:len(str(data))] + str(data)
     return [frame, meta]
 
 def svs_decode(frame):
