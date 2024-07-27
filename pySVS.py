@@ -706,7 +706,7 @@ if __name__ == "__main__":
                         if len(opt_val.split("@")[i]) > 0:
                             built_frames += svs_encode("MEMREAD", sub_params[i]) if opt_val.split("@")[i].upper() == 'A' else svs_encode("MEMWRITE", sub_params[i], int(float(opt_val.split("@")[i])))
                 else:
-                    print("ERROR: Values for LPF incorrectn\nExamples of correct values: 1@@12, 0@50@12, A@@6")
+                    print("ERROR: Values for LPF incorrect\nExamples of correct values: 1@@12, 0@50@12, A@@6")
                     sys.exit(1)
             elif opt in ("-q", "--peq"):
                 if len(opt_val.split("@")) == 5:
