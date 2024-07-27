@@ -635,7 +635,7 @@ def show_usage():
     print('-e or --encode: Just print built frames based on param values.')
     print('-d FRAME or --decode=FRAME: Decode values of a frame.')
     print('-i or --info: Show subwoofer info.')
-    print('-s ftype@param@data or --send ftype@param@data: Send svs_encode frame type, param and data.')
+    print('-s ftype@param@data or --send ftype@param@data: Send svs_encode frame type, param and data (-s help).')
     print('\nPARAMETER LIST:')
     print('\t-l X@Y@Z or --lpf=X@Y@Z: Sets Low Pass Filter to X[0(OFF),1(ON)], Y[freq] and Z[slope].')
     print('\t-q V@W@X@Y@Z or --peq=V@W@X@Y@Z: Sets PEQ V[1..3], W[0(OFF),1(ON)], X[freq], Y[boost] and Z[Qfactor].')
@@ -656,7 +656,7 @@ def string_isalnumify(in_string):
     return ''.join([char for char in in_string.upper() if char.isalnum()])
 
 if __name__ == "__main__":
-    VERSION = "v3.5 Final"
+    VERSION = "v3.51 Final"
     dev="hci0"
     if len(sys.argv[1:]) > 0:
         GUI = 0
@@ -691,6 +691,9 @@ if __name__ == "__main__":
             elif opt in ("-i", "--info"):
                 built_frames += svs_encode("SUB_INFO1", "") + svs_encode("SUB_INFO2", "") + svs_encode("SUB_INFO3", "")
             elif opt in ("-s", "--send"):
+                if opt_val == "help" or len(opt_val.split("@")) !=3:
+                    print("FRAME_TYPE@PARAMETER@DATA\n\nAvailable frame types: " + str(SVS_FRAME_TYPES.keys()) + "\n\n" + "Available frame parameters: " + str(SVS_PARAMS.keys()) + "\n" )
+                    sys.exit(0)
                 data = opt_val.split("@",2)[2]
                 if len(data) > 0:
                     data = string_isalnumify(data) if SVS_PARAMS[opt_val.split("@")[1]]["limits_type"] == 2 else float(data)
@@ -703,8 +706,7 @@ if __name__ == "__main__":
                         if len(opt_val.split("@")[i]) > 0:
                             built_frames += svs_encode("MEMREAD", sub_params[i]) if opt_val.split("@")[i].upper() == 'A' else svs_encode("MEMWRITE", sub_params[i], int(float(opt_val.split("@")[i])))
                 else:
-                    print("ERROR: Values for LPF incorrect")
-                    print("Examples of correct values: 1@@12, 0@50@12, A@@6")
+                    print("ERROR: Values for LPF incorrectn\nExamples of correct values: 1@@12, 0@50@12, A@@6")
                     sys.exit(1)
             elif opt in ("-q", "--peq"):
                 if len(opt_val.split("@")) == 5:
@@ -718,8 +720,7 @@ if __name__ == "__main__":
                         print("ERROR: PEQ profile number incorrect")
                         sys.exit(1)
                 else:
-                    print("ERROR: Values for PEQ incorrect")
-                    print("Examples of correct values: 2@1@@@0.2, 3@0@40@-11.5@10, 1@A@@@")
+                    print("ERROR: Values for PEQ incorrect\nExamples of correct values: 2@1@@@0.2, 3@0@40@-11.5@10, 1@A@@@")
                     sys.exit(2)
             elif opt in ("-r", "--roomgain"):
                 if len(opt_val.split("@")) == 3:
@@ -728,8 +729,7 @@ if __name__ == "__main__":
                         if len(opt_val.split("@")[i]) > 0:
                             built_frames += svs_encode("MEMREAD",sub_params[i]) if opt_val.split("@")[i].upper() == 'A' else svs_encode("MEMWRITE",sub_params[i],int(float(opt_val.split("@")[i])))
                 else:
-                    print("ERROR: Values for Roomgain incorrect")
-                    print("Examples of correct values: 1@@12, 0@31@12, A@@6")
+                    print("ERROR: Values for Roomgain incorrect\nExamples of correct values: 1@@12, 0@31@12, A@@6")
                     sys.exit(1)
             elif opt in ("-o", "--volume"):
                 built_frames += svs_encode("MEMREAD", "VOLUME") if opt_val.upper() == 'A' else svs_encode("MEMWRITE", "VOLUME", int(float(opt_val)))
