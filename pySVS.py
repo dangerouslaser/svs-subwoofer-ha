@@ -692,7 +692,7 @@ if __name__ == "__main__":
                 built_frames += svs_encode("SUB_INFO1", "") + svs_encode("SUB_INFO2", "") + svs_encode("SUB_INFO3", "")
             elif opt in ("-s", "--send"):
                 if opt_val == "help" or len(opt_val.split("@")) !=3:
-                    print("FRAME_TYPE@PARAMETER@DATA\n\nAvailable frame types: " + str(SVS_FRAME_TYPES.keys()) + "\n\n" + "Available frame parameters: " + str(SVS_PARAMS.keys()) + "\n" )
+                    print("FRAME_TYPE@PARAMETER@DATA\n\nAvailable frame types: " + ", ".join(key for key in SVS_FRAME_TYPES.keys() if "RESP" not in key) + "\n\n" + "Available frame parameters: " + ", ".join(key for key in SVS_PARAMS.keys()) + "\n" )
                     sys.exit(0)
                 data = opt_val.split("@",2)[2]
                 if len(data) > 0:
