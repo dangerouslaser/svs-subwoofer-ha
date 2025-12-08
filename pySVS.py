@@ -265,7 +265,7 @@ def svs_decode(frame):
     O_PREAMBLE = frame[0]
     O_ATTRIBUTES = []
     O_FTYPE = "UNKNOWN"
-    O_FLENGTH =""
+    O_FLENGTH = ["0x" + bytes2hexstr(frame[3:5]), int.from_bytes(frame[3:5], 'little'), len(frame)]
     O_HAS_PADDING = ""
     O_ID = ""
     O_MEM_START = ""
@@ -276,7 +276,6 @@ def svs_decode(frame):
     O_RESET_ID = ""
     O_PADDING = ""
     O_CRC = ["0x" + bytes2hexstr(frame[-2:]), "OK" if frame[-2:] == crc_hqx(frame[:-2],0).to_bytes(2, 'little') else "MISSMATCH"]
-    O_FLENGTH = ["0x" + bytes2hexstr(frame[3:5]), int.from_bytes(frame[3:5], 'little'), len(frame)]
     O_RECOGNIZED =  (O_PREAMBLE == int.from_bytes(FRAME_PREAMBLE, 'little')) and (O_FLENGTH[1] == O_FLENGTH[2]) and (O_CRC[1] == "OK")
     if O_RECOGNIZED:
         for key in SVS_FRAME_TYPES.keys():
@@ -294,12 +293,12 @@ def svs_decode(frame):
             O_ID = ["0x" + bytes2hexstr(frame[:4]), int.from_bytes(frame[:4], 'little')]
             mem_start = int.from_bytes(frame[4:6], 'little')
             O_MEM_START = ["0x" + bytes2hexstr(frame[4:6]), mem_start]
-            mem_size = int.from_bytes(frame[6:8], 'little')
+            mem_size = int.from_bytes(frame[6:8], 'little') or 1
             O_MEM_SIZE = ["0x" + bytes2hexstr(frame[6:8]), mem_size]
             frame = frame[8:] #remove processed bytes from frame
 
             #read attributes
-            for offset in range(0,mem_size+1,2):
+            for offset in range(0,mem_size,2):
                 for key in SVS_PARAMS.keys():
                     if SVS_PARAMS[key]["limits_type"] != "group" and SVS_PARAMS[key]["id"] == O_ID[1]:
                         if (mem_start + offset) == SVS_PARAMS[key]["offset"]:
@@ -624,7 +623,7 @@ def string_isalnumify(in_string):
     return ''.join([char for char in in_string.upper() if char.isalnum()])
 
 if __name__ == "__main__":
-    VERSION = "v3.60 Final"
+    VERSION = "v3.61 Final"
     dev="hci0"
     if len(sys.argv[1:]) > 0:
         GUI = 0
