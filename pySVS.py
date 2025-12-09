@@ -275,6 +275,7 @@ def svs_decode(frame):
     O_VALIDATED_VALUES = {}
     O_RESET_ID = ""
     O_PADDING = ""
+    O_OLD_2C_2_34_VALUES = ""
     O_CRC = ["0x" + bytes2hexstr(frame[-2:]), "OK" if frame[-2:] == crc_hqx(frame[:-2],0).to_bytes(2, 'little') else "MISSMATCH"]
     O_RECOGNIZED =  (O_PREAMBLE == int.from_bytes(FRAME_PREAMBLE, 'little')) and (O_FLENGTH[1] == O_FLENGTH[2]) and (O_CRC[1] == "OK")
     if O_RECOGNIZED:
@@ -293,12 +294,12 @@ def svs_decode(frame):
             O_ID = ["0x" + bytes2hexstr(frame[:4]), int.from_bytes(frame[:4], 'little')]
             mem_start = int.from_bytes(frame[4:6], 'little')
             O_MEM_START = ["0x" + bytes2hexstr(frame[4:6]), mem_start]
-            mem_size = int.from_bytes(frame[6:8], 'little') or 1
+            mem_size = int.from_bytes(frame[6:8], 'little')
             O_MEM_SIZE = ["0x" + bytes2hexstr(frame[6:8]), mem_size]
             frame = frame[8:] #remove processed bytes from frame
 
             #read attributes
-            for offset in range(0,mem_size,2):
+            for offset in range(0,mem_size or 2,2):
                 for key in SVS_PARAMS.keys():
                     if SVS_PARAMS[key]["limits_type"] != "group" and SVS_PARAMS[key]["id"] == O_ID[1]:
                         if (mem_start + offset) == SVS_PARAMS[key]["offset"]:
@@ -322,6 +323,9 @@ def svs_decode(frame):
                                 if check:
                                     O_VALIDATED_VALUES[key] = int(value) if ".0" in str(value) else value
                                 frame = frame[SVS_PARAMS[key]["n_bytes"]:] #remove processed bytes from frame
+                                if offset == (mem_size - 2) and int.from_bytes(frame,'little') != 0:
+                                    O_OLD_2C_2_34_VALUES = ["0x" + bytes2hexstr(frame[:8])]
+                                    frame = frame[8:]
                             break;
                         elif (mem_start + offset) >= SVS_PARAMS[key]["offset"] and (mem_start + offset) < (SVS_PARAMS[key]["offset"] + SVS_PARAMS[key]["n_bytes"]):
                             #memory position inside a parameter memory range (memory to memory+size) = NO MATCH
@@ -359,7 +363,7 @@ def svs_decode(frame):
         O_PADDING = "0x" + bytes2hexstr(frame) if(len(frame) > 0) else ""
 
     output = {}
-    for key,val in [("ATTRIBUTES",O_ATTRIBUTES), ("FRAME_RECOGNIZED",O_RECOGNIZED), ("PREAMBLE",str(hex(O_PREAMBLE))), ("FRAME_TYPE",O_FTYPE), ("FRAME_LENGTH", O_FLENGTH), ("HAS PADDING", O_HAS_PADDING), ("ID", O_ID), ("RESET_ID", O_RESET_ID) , ("MEMORY_START", O_MEM_START), ("DATA_LENGTH", O_MEM_SIZE), ("DATA", ["0x" + bytes2hexstr(O_RAW_DATA), O_RAW_DATA, O_B_ENDIAN_DATA] if len(bytes2hexstr(O_RAW_DATA)) > 0 else ""), ("VALIDATED_VALUES", O_VALIDATED_VALUES), ("PADDING", O_PADDING), ("CRC",O_CRC)]:
+    for key,val in [("ATTRIBUTES",O_ATTRIBUTES), ("FRAME_RECOGNIZED",O_RECOGNIZED), ("PREAMBLE",str(hex(O_PREAMBLE))), ("FRAME_TYPE",O_FTYPE), ("FRAME_LENGTH", O_FLENGTH), ("HAS PADDING", O_HAS_PADDING), ("ID", O_ID), ("RESET_ID", O_RESET_ID) , ("MEMORY_START", O_MEM_START), ("DATA_LENGTH", O_MEM_SIZE), ("DATA", ["0x" + bytes2hexstr(O_RAW_DATA), O_RAW_DATA, O_B_ENDIAN_DATA] if len(bytes2hexstr(O_RAW_DATA)) > 0 else ""), ("VALIDATED_VALUES", O_VALIDATED_VALUES), ("PADDING", O_PADDING), ("OLD 2C TO 34 VALUES", O_OLD_2C_2_34_VALUES), ("CRC",O_CRC)]:
         if type(val) == bool or len(val) > 0:
             output[key] = val
     return output
@@ -623,7 +627,7 @@ def string_isalnumify(in_string):
     return ''.join([char for char in in_string.upper() if char.isalnum()])
 
 if __name__ == "__main__":
-    VERSION = "v3.61 Final"
+    VERSION = "v3.62 Final"
     dev="hci0"
     if len(sys.argv[1:]) > 0:
         GUI = 0
