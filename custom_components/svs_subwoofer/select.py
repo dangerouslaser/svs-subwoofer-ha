@@ -121,10 +121,44 @@ class SVSSelectEntity(CoordinatorEntity[SVSSubwooferCoordinator], SelectEntity):
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.address}_{description.key}"
         self._attr_device_info = coordinator.device_info
-        self._attr_options = list(description.options)
+        self._base_options = list(description.options)
 
         # Build reverse map for value -> option lookup
         self._reverse_map = {v: k for k, v in description.value_map.items()}
+
+    @property
+    def options(self) -> list[str]:
+        """Return list of options, with custom preset names if available."""
+        if not self.entity_description.is_preset:
+            return self._base_options
+
+        # Build preset options with custom names from coordinator data
+        preset_options = []
+        for i in range(1, 4):
+            name_key = f"PRESET{i}NAME"
+            custom_name = self.coordinator.data.get(name_key)
+            if custom_name and custom_name.strip():
+                # Use custom name, strip null bytes and whitespace
+                preset_options.append(custom_name.strip().replace('\x00', ''))
+            else:
+                preset_options.append(f"Preset {i}")
+        preset_options.append("Default")
+        return preset_options
+
+    @property
+    def _preset_value_map(self) -> dict[str, int]:
+        """Return mapping of current preset option names to values."""
+        if not self.entity_description.is_preset:
+            return self.entity_description.value_map
+
+        # Build dynamic preset map based on current options
+        current_options = self.options
+        return {
+            current_options[0]: 1,  # Preset 1
+            current_options[1]: 2,  # Preset 2
+            current_options[2]: 3,  # Preset 3
+            current_options[3]: 4,  # Default
+        }
 
     @property
     def current_option(self) -> str | None:
@@ -142,7 +176,9 @@ class SVSSelectEntity(CoordinatorEntity[SVSSubwooferCoordinator], SelectEntity):
         """Change the selected option."""
         _LOGGER.debug("Selecting %s for %s", option, self.entity_description.key)
 
-        value = self.entity_description.value_map.get(option)
+        # Use dynamic preset map for presets
+        value_map = self._preset_value_map if self.entity_description.is_preset else self.entity_description.value_map
+        value = value_map.get(option)
         if value is None:
             _LOGGER.error("Invalid option: %s", option)
             return
