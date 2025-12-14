@@ -173,6 +173,86 @@ entities:
 
 > **Note:** Replace `svs_subwoofer` with your actual device name (e.g., `rightsub`, `leftsub`).
 
+### Example Automations
+
+#### Movie Mode - Load preset when watching movies
+
+```yaml
+alias: Movie Mode - SVS Cinema Preset
+description: Load cinema preset when media player starts playing
+triggers:
+  - trigger: state
+    entity_id: media_player.living_room_tv
+    to: playing
+actions:
+  - action: select.select_option
+    target:
+      entity_id: select.svs_subwoofer_preset
+    data:
+      option: "Movie"  # Or use your custom preset name
+```
+
+#### Night Mode - Reduce volume after 10 PM
+
+```yaml
+alias: Night Mode - Lower Subwoofer Volume
+description: Automatically reduce subwoofer volume at night
+triggers:
+  - trigger: time
+    at: "22:00:00"
+conditions:
+  - condition: state
+    entity_id: binary_sensor.svs_subwoofer_connected
+    state: "on"
+actions:
+  - action: number.set_value
+    target:
+      entity_id: number.svs_subwoofer_volume
+    data:
+      value: -30
+```
+
+#### Restore Day Volume
+
+```yaml
+alias: Day Mode - Restore Subwoofer Volume
+description: Restore normal subwoofer volume in the morning
+triggers:
+  - trigger: time
+    at: "08:00:00"
+actions:
+  - action: number.set_value
+    target:
+      entity_id: number.svs_subwoofer_volume
+    data:
+      value: -15
+```
+
+#### Music Mode - Different EQ for music
+
+```yaml
+alias: Music Mode - Enhanced Bass
+description: Enable PEQ boost when listening to music
+triggers:
+  - trigger: state
+    entity_id: media_player.spotify
+    to: playing
+actions:
+  - action: switch.turn_on
+    target:
+      entity_id: switch.svs_subwoofer_peq1
+  - action: number.set_value
+    target:
+      entity_id: number.svs_subwoofer_peq1_frequency
+    data:
+      value: 50
+  - action: number.set_value
+    target:
+      entity_id: number.svs_subwoofer_peq1_boost
+    data:
+      value: 3
+```
+
 ### Troubleshooting
 
 **Device not discovered:**
