@@ -21,7 +21,11 @@ from .svs_protocol import svs_encode, FrameAssembler
 _LOGGER = logging.getLogger(__name__)
 
 # Connection timeout in seconds
-CONNECTION_TIMEOUT = 30.0
+CONNECTION_TIMEOUT = 60.0
+
+# Number of connection retry attempts
+MAX_CONNECT_RETRIES = 3
+RETRY_DELAY = 2.0
 
 
 class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -89,30 +93,74 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._connected and self._client and self._client.is_connected:
             return
 
-        ble_device = async_ble_device_from_address(
-            self.hass, self.address, connectable=True
+        last_error: Exception | None = None
+
+        for attempt in range(MAX_CONNECT_RETRIES):
+            # Get fresh BLE device reference each attempt
+            ble_device = async_ble_device_from_address(
+                self.hass, self.address, connectable=True
+            )
+            if not ble_device:
+                _LOGGER.warning(
+                    "Device %s not found (attempt %d/%d). "
+                    "Ensure subwoofer is powered on and not connected to another device.",
+                    self.address, attempt + 1, MAX_CONNECT_RETRIES
+                )
+                if attempt < MAX_CONNECT_RETRIES - 1:
+                    await asyncio.sleep(RETRY_DELAY)
+                    continue
+                raise UpdateFailed(
+                    f"Device {self.address} not found. "
+                    "Check that the subwoofer is powered on and the SVS app is disconnected."
+                )
+
+            _LOGGER.debug(
+                "Connecting to SVS Subwoofer at %s (attempt %d/%d)",
+                self.address, attempt + 1, MAX_CONNECT_RETRIES
+            )
+
+            try:
+                # Create fresh client for each attempt
+                self._client = BleakClient(
+                    ble_device,
+                    disconnected_callback=self._on_disconnect,
+                )
+                await asyncio.wait_for(
+                    self._client.connect(),
+                    timeout=CONNECTION_TIMEOUT
+                )
+                await self._client.start_notify(SVS_CHAR_UUID, self._notification_handler)
+                self._connected = True
+                _LOGGER.info("Connected to SVS Subwoofer at %s", self.address)
+                return
+            except asyncio.TimeoutError as err:
+                last_error = err
+                _LOGGER.warning(
+                    "Timeout connecting to %s (attempt %d/%d)",
+                    self.address, attempt + 1, MAX_CONNECT_RETRIES
+                )
+            except BleakError as err:
+                last_error = err
+                _LOGGER.warning(
+                    "BLE error connecting to %s: %s (attempt %d/%d)",
+                    self.address, err, attempt + 1, MAX_CONNECT_RETRIES
+                )
+
+            # Clean up failed client
+            if self._client:
+                try:
+                    await self._client.disconnect()
+                except Exception:
+                    pass
+                self._client = None
+
+            if attempt < MAX_CONNECT_RETRIES - 1:
+                await asyncio.sleep(RETRY_DELAY)
+
+        # All retries failed
+        raise UpdateFailed(
+            f"Failed to connect to {self.address} after {MAX_CONNECT_RETRIES} attempts: {last_error}"
         )
-        if not ble_device:
-            raise UpdateFailed(f"Device {self.address} not found")
-
-        _LOGGER.debug("Connecting to SVS Subwoofer at %s", self.address)
-
-        try:
-            self._client = BleakClient(
-                ble_device,
-                disconnected_callback=self._on_disconnect,
-            )
-            await asyncio.wait_for(
-                self._client.connect(),
-                timeout=CONNECTION_TIMEOUT
-            )
-            await self._client.start_notify(SVS_CHAR_UUID, self._notification_handler)
-            self._connected = True
-            _LOGGER.info("Connected to SVS Subwoofer at %s", self.address)
-        except asyncio.TimeoutError as err:
-            raise UpdateFailed(f"Timeout connecting to {self.address}") from err
-        except BleakError as err:
-            raise UpdateFailed(f"Failed to connect to {self.address}: {err}") from err
 
     def _on_disconnect(self, client: BleakClient) -> None:
         """Handle disconnection from device."""
