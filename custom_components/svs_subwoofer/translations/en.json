@@ -1,0 +1,114 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add SVS Subwoofer",
+        "description": "Select a discovered subwoofer or choose manual entry.",
+        "data": {
+          "address": "Device",
+          "name": "Device Name"
+        }
+      },
+      "manual": {
+        "title": "Manual Setup",
+        "description": "Enter the Bluetooth MAC address of your SVS subwoofer. Format: {mac_format}",
+        "data": {
+          "address": "MAC Address",
+          "name": "Device Name"
+        }
+      },
+      "bluetooth_confirm": {
+        "title": "Confirm SVS Subwoofer",
+        "description": "Do you want to set up {name} ({address})?",
+        "data": {
+          "name": "Device Name"
+        }
+      }
+    },
+    "error": {
+      "invalid_mac": "Invalid MAC address format",
+      "cannot_connect": "Failed to connect to device"
+    },
+    "abort": {
+      "already_configured": "Device is already configured",
+      "no_device": "No device information available"
+    }
+  },
+  "entity": {
+    "number": {
+      "volume": {
+        "name": "Volume"
+      },
+      "phase": {
+        "name": "Phase"
+      },
+      "lpf_frequency": {
+        "name": "Low Pass Filter Frequency"
+      },
+      "peq1_frequency": {
+        "name": "PEQ1 Frequency"
+      },
+      "peq1_boost": {
+        "name": "PEQ1 Boost"
+      },
+      "peq1_q_factor": {
+        "name": "PEQ1 Q-Factor"
+      },
+      "peq2_frequency": {
+        "name": "PEQ2 Frequency"
+      },
+      "peq2_boost": {
+        "name": "PEQ2 Boost"
+      },
+      "peq2_q_factor": {
+        "name": "PEQ2 Q-Factor"
+      },
+      "peq3_frequency": {
+        "name": "PEQ3 Frequency"
+      },
+      "peq3_boost": {
+        "name": "PEQ3 Boost"
+      },
+      "peq3_q_factor": {
+        "name": "PEQ3 Q-Factor"
+      }
+    },
+    "select": {
+      "lpf_slope": {
+        "name": "Low Pass Filter Slope"
+      },
+      "room_gain_frequency": {
+        "name": "Room Gain Frequency"
+      },
+      "room_gain_slope": {
+        "name": "Room Gain Slope"
+      },
+      "standby_mode": {
+        "name": "Standby Mode"
+      },
+      "preset": {
+        "name": "Preset"
+      }
+    },
+    "switch": {
+      "lpf_enable": {
+        "name": "Low Pass Filter"
+      },
+      "peq1_enable": {
+        "name": "PEQ1"
+      },
+      "peq2_enable": {
+        "name": "PEQ2"
+      },
+      "peq3_enable": {
+        "name": "PEQ3"
+      },
+      "room_gain_enable": {
+        "name": "Room Gain Compensation"
+      },
+      "polarity": {
+        "name": "Polarity (Inverted)"
+      }
+    }
+  }
+}

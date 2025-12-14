@@ -1,0 +1,18 @@
+{
+  "domain": "svs_subwoofer",
+  "name": "SVS Subwoofer",
+  "version": "1.0.0",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": ["bluetooth"],
+  "documentation": "https://github.com/logon84/pySVS",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "requirements": ["bleak>=0.21.0"],
+  "bluetooth": [
+    {
+      "service_uuid": "1fee6acf-a826-4e37-9635-4d8a01642c5d",
+      "connectable": true
+    }
+  ]
+}

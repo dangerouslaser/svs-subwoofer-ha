@@ -1,0 +1,123 @@
+"""Switch platform for SVS Subwoofer."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+import logging
+from typing import Any
+
+from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from .const import DOMAIN
+from .coordinator import SVSSubwooferCoordinator
+
+_LOGGER = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, kw_only=True)
+class SVSSwitchEntityDescription(SwitchEntityDescription):
+    """Describes SVS switch entity."""
+
+    svs_param: str
+
+
+SWITCH_DESCRIPTIONS: tuple[SVSSwitchEntityDescription, ...] = (
+    SVSSwitchEntityDescription(
+        key="lpf_enable",
+        translation_key="lpf_enable",
+        svs_param="LOW_PASS_FILTER_ENABLE",
+    ),
+    SVSSwitchEntityDescription(
+        key="peq1_enable",
+        translation_key="peq1_enable",
+        svs_param="PEQ1_ENABLE",
+    ),
+    SVSSwitchEntityDescription(
+        key="peq2_enable",
+        translation_key="peq2_enable",
+        svs_param="PEQ2_ENABLE",
+    ),
+    SVSSwitchEntityDescription(
+        key="peq3_enable",
+        translation_key="peq3_enable",
+        svs_param="PEQ3_ENABLE",
+    ),
+    SVSSwitchEntityDescription(
+        key="room_gain_enable",
+        translation_key="room_gain_enable",
+        svs_param="ROOM_GAIN_ENABLE",
+    ),
+    SVSSwitchEntityDescription(
+        key="polarity",
+        translation_key="polarity",
+        svs_param="POLARITY",
+    ),
+)
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up SVS switch entities."""
+    coordinator: SVSSubwooferCoordinator = hass.data[DOMAIN][entry.entry_id]
+
+    async_add_entities(
+        SVSSwitchEntity(coordinator, description)
+        for description in SWITCH_DESCRIPTIONS
+    )
+
+
+class SVSSwitchEntity(CoordinatorEntity[SVSSubwooferCoordinator], SwitchEntity):
+    """Representation of an SVS switch entity."""
+
+    _attr_has_entity_name = True
+    entity_description: SVSSwitchEntityDescription
+
+    def __init__(
+        self,
+        coordinator: SVSSubwooferCoordinator,
+        description: SVSSwitchEntityDescription,
+    ) -> None:
+        """Initialize the switch entity."""
+        super().__init__(coordinator)
+        self.entity_description = description
+        self._attr_unique_id = f"{coordinator.address}_{description.key}"
+        self._attr_device_info = coordinator.device_info
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return true if switch is on."""
+        value = self.coordinator.data.get(self.entity_description.svs_param)
+        if value is None:
+            return None
+        return bool(value)
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the switch on."""
+        _LOGGER.debug("Turning on %s", self.entity_description.key)
+        success = await self.coordinator.async_send_command(
+            self.entity_description.svs_param, 1
+        )
+        if success:
+            self.coordinator.data[self.entity_description.svs_param] = 1
+            self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn the switch off."""
+        _LOGGER.debug("Turning off %s", self.entity_description.key)
+        success = await self.coordinator.async_send_command(
+            self.entity_description.svs_param, 0
+        )
+        if success:
+            self.coordinator.data[self.entity_description.svs_param] = 0
+            self.async_write_ha_state()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.async_write_ha_state()
