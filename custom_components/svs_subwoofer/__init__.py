@@ -1,6 +1,6 @@
 """SVS Subwoofer integration for Home Assistant.
 
-Control SVS SB-1000 Pro and compatible subwoofers via Bluetooth.
+Control SVS subwoofers via Bluetooth using the same protocol as the official SVS app.
 Based on pySVS by Logon84: https://github.com/logon84/pySVS
 """
 from __future__ import annotations

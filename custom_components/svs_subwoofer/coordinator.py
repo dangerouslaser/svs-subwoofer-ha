@@ -72,7 +72,7 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             identifiers={(DOMAIN, self.address)},
             name=self.device_name,
             manufacturer="SVS",
-            model="SB-1000 Pro",
+            model="Subwoofer",
         )
 
     @property
