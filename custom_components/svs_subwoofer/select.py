@@ -53,6 +53,7 @@ SELECT_DESCRIPTIONS: tuple[SVSSelectEntityDescription, ...] = (
         svs_param="LOW_PASS_FILTER_SLOPE",
         options=LPF_SLOPE_OPTIONS,
         value_map=LPF_SLOPE_MAP,
+        icon="mdi:tune-vertical",
     ),
     SVSSelectEntityDescription(
         key="room_gain_frequency",
@@ -60,6 +61,7 @@ SELECT_DESCRIPTIONS: tuple[SVSSelectEntityDescription, ...] = (
         svs_param="ROOM_GAIN_FREQ",
         options=ROOM_GAIN_FREQ_OPTIONS,
         value_map=ROOM_GAIN_FREQ_MAP,
+        icon="mdi:home-sound-in",
     ),
     SVSSelectEntityDescription(
         key="room_gain_slope",
@@ -67,6 +69,7 @@ SELECT_DESCRIPTIONS: tuple[SVSSelectEntityDescription, ...] = (
         svs_param="ROOM_GAIN_SLOPE",
         options=ROOM_GAIN_SLOPE_OPTIONS,
         value_map=ROOM_GAIN_SLOPE_MAP,
+        icon="mdi:home-sound-in",
     ),
     SVSSelectEntityDescription(
         key="standby_mode",
@@ -74,6 +77,7 @@ SELECT_DESCRIPTIONS: tuple[SVSSelectEntityDescription, ...] = (
         svs_param="STANDBY",
         options=STANDBY_MODES,
         value_map=STANDBY_MODE_MAP,
+        icon="mdi:power-standby",
     ),
     SVSSelectEntityDescription(
         key="preset",
@@ -82,6 +86,7 @@ SELECT_DESCRIPTIONS: tuple[SVSSelectEntityDescription, ...] = (
         options=PRESETS,
         value_map=PRESET_MAP,
         is_preset=True,
+        icon="mdi:playlist-music",
     ),
 )
 

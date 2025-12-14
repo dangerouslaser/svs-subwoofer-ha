@@ -29,31 +29,37 @@ SWITCH_DESCRIPTIONS: tuple[SVSSwitchEntityDescription, ...] = (
         key="lpf_enable",
         translation_key="lpf_enable",
         svs_param="LOW_PASS_FILTER_ENABLE",
+        icon="mdi:tune-vertical",
     ),
     SVSSwitchEntityDescription(
         key="peq1_enable",
         translation_key="peq1_enable",
         svs_param="PEQ1_ENABLE",
+        icon="mdi:equalizer",
     ),
     SVSSwitchEntityDescription(
         key="peq2_enable",
         translation_key="peq2_enable",
         svs_param="PEQ2_ENABLE",
+        icon="mdi:equalizer",
     ),
     SVSSwitchEntityDescription(
         key="peq3_enable",
         translation_key="peq3_enable",
         svs_param="PEQ3_ENABLE",
+        icon="mdi:equalizer",
     ),
     SVSSwitchEntityDescription(
         key="room_gain_enable",
         translation_key="room_gain_enable",
         svs_param="ROOM_GAIN_ENABLE",
+        icon="mdi:home-sound-in",
     ),
     SVSSwitchEntityDescription(
         key="polarity",
         translation_key="polarity",
         svs_param="POLARITY",
+        icon="mdi:swap-horizontal",
     ),
 )
 

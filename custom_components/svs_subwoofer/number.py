@@ -58,6 +58,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         native_step=VOLUME_STEP,
         native_unit_of_measurement="dB",
         mode=NumberMode.SLIDER,
+        icon="mdi:volume-high",
     ),
     SVSNumberEntityDescription(
         key="phase",
@@ -68,6 +69,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         native_step=PHASE_STEP,
         native_unit_of_measurement="°",
         mode=NumberMode.SLIDER,
+        icon="mdi:sine-wave",
     ),
     SVSNumberEntityDescription(
         key="lpf_frequency",
@@ -78,6 +80,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         native_step=LPF_FREQ_STEP,
         native_unit_of_measurement="Hz",
         mode=NumberMode.SLIDER,
+        icon="mdi:tune-vertical",
     ),
     # PEQ1
     SVSNumberEntityDescription(
@@ -89,6 +92,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         native_step=PEQ_FREQ_STEP,
         native_unit_of_measurement="Hz",
         mode=NumberMode.SLIDER,
+        icon="mdi:equalizer",
     ),
     SVSNumberEntityDescription(
         key="peq1_boost",
@@ -99,6 +103,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         native_step=PEQ_BOOST_STEP,
         native_unit_of_measurement="dB",
         mode=NumberMode.SLIDER,
+        icon="mdi:equalizer",
     ),
     SVSNumberEntityDescription(
         key="peq1_q_factor",
@@ -108,6 +113,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         native_max_value=PEQ_Q_MAX,
         native_step=PEQ_Q_STEP,
         mode=NumberMode.BOX,
+        icon="mdi:equalizer",
     ),
     # PEQ2
     SVSNumberEntityDescription(
@@ -119,6 +125,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         native_step=PEQ_FREQ_STEP,
         native_unit_of_measurement="Hz",
         mode=NumberMode.SLIDER,
+        icon="mdi:equalizer",
     ),
     SVSNumberEntityDescription(
         key="peq2_boost",
@@ -129,6 +136,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         native_step=PEQ_BOOST_STEP,
         native_unit_of_measurement="dB",
         mode=NumberMode.SLIDER,
+        icon="mdi:equalizer",
     ),
     SVSNumberEntityDescription(
         key="peq2_q_factor",
@@ -138,6 +146,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         native_max_value=PEQ_Q_MAX,
         native_step=PEQ_Q_STEP,
         mode=NumberMode.BOX,
+        icon="mdi:equalizer",
     ),
     # PEQ3
     SVSNumberEntityDescription(
@@ -149,6 +158,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         native_step=PEQ_FREQ_STEP,
         native_unit_of_measurement="Hz",
         mode=NumberMode.SLIDER,
+        icon="mdi:equalizer",
     ),
     SVSNumberEntityDescription(
         key="peq3_boost",
@@ -159,6 +169,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         native_step=PEQ_BOOST_STEP,
         native_unit_of_measurement="dB",
         mode=NumberMode.SLIDER,
+        icon="mdi:equalizer",
     ),
     SVSNumberEntityDescription(
         key="peq3_q_factor",
@@ -168,6 +179,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         native_max_value=PEQ_Q_MAX,
         native_step=PEQ_Q_STEP,
         mode=NumberMode.BOX,
+        icon="mdi:equalizer",
     ),
 )
 
