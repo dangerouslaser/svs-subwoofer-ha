@@ -53,3 +53,40 @@ PRESET_MAP: Final = {"Preset 1": 1, "Preset 2": 2, "Preset 3": 3, "Default": 4}
 
 # Command rate limiting (seconds)
 COMMAND_DELAY: Final = 0.2
+
+# Device automation - Event type
+EVENT_SVS_SUBWOOFER: Final = "svs_subwoofer_event"
+
+# Device automation - Trigger types
+TRIGGER_TYPE_CONNECTED: Final = "connected"
+TRIGGER_TYPE_DISCONNECTED: Final = "disconnected"
+TRIGGER_TYPE_PRESET_LOADED: Final = "preset_loaded"
+TRIGGER_TYPES: Final = {TRIGGER_TYPE_CONNECTED, TRIGGER_TYPE_DISCONNECTED, TRIGGER_TYPE_PRESET_LOADED}
+
+# Device automation - Trigger subtypes (for presets)
+TRIGGER_SUBTYPE_PRESET_1: Final = "preset_1"
+TRIGGER_SUBTYPE_PRESET_2: Final = "preset_2"
+TRIGGER_SUBTYPE_PRESET_3: Final = "preset_3"
+TRIGGER_SUBTYPE_DEFAULT: Final = "default"
+TRIGGER_SUBTYPES_PRESET: Final = {
+    TRIGGER_SUBTYPE_PRESET_1,
+    TRIGGER_SUBTYPE_PRESET_2,
+    TRIGGER_SUBTYPE_PRESET_3,
+    TRIGGER_SUBTYPE_DEFAULT,
+}
+
+# Device automation - Action types
+ACTION_TYPE_LOAD_PRESET: Final = "load_preset"
+ACTION_TYPE_SAVE_PRESET: Final = "save_preset"
+ACTION_TYPE_SET_VOLUME: Final = "set_volume"
+ACTION_TYPE_RECONNECT: Final = "reconnect"
+ACTION_TYPES: Final = {
+    ACTION_TYPE_LOAD_PRESET,
+    ACTION_TYPE_SAVE_PRESET,
+    ACTION_TYPE_SET_VOLUME,
+    ACTION_TYPE_RECONNECT,
+}
+
+# Action parameters
+CONF_PRESET: Final = "preset"
+CONF_VOLUME: Final = "volume"

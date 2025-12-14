@@ -10,12 +10,23 @@ from bleak.exc import BleakError
 
 from homeassistant.components import bluetooth
 from homeassistant.components.bluetooth import async_ble_device_from_address
+from homeassistant.const import CONF_DEVICE_ID, CONF_TYPE
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DOMAIN, SVS_CHAR_UUID, COMMAND_DELAY
+from .const import (
+    DOMAIN,
+    SVS_CHAR_UUID,
+    COMMAND_DELAY,
+    EVENT_SVS_SUBWOOFER,
+    TRIGGER_TYPE_CONNECTED,
+    TRIGGER_TYPE_DISCONNECTED,
+    TRIGGER_TYPE_PRESET_LOADED,
+    TRIGGER_SUBTYPE_DEFAULT,
+)
 from .svs_protocol import svs_encode, FrameAssembler
 
 _LOGGER = logging.getLogger(__name__)
@@ -64,6 +75,31 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Initialize data with defaults
         self.data: dict[str, Any] = {}
+        self._device_id: str | None = None
+
+    def _get_device_id(self) -> str | None:
+        """Get the device ID from the device registry."""
+        if self._device_id:
+            return self._device_id
+        device_registry = dr.async_get(self.hass)
+        device = device_registry.async_get_device(identifiers={(DOMAIN, self.address)})
+        if device:
+            self._device_id = device.id
+        return self._device_id
+
+    def _fire_event(self, trigger_type: str, subtype: str | None = None) -> None:
+        """Fire a device automation event."""
+        device_id = self._get_device_id()
+        if not device_id:
+            return
+        event_data = {
+            CONF_DEVICE_ID: device_id,
+            CONF_TYPE: trigger_type,
+        }
+        if subtype:
+            event_data["subtype"] = subtype
+        self.hass.bus.async_fire(EVENT_SVS_SUBWOOFER, event_data)
+        _LOGGER.debug("Fired event %s: %s", EVENT_SVS_SUBWOOFER, event_data)
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -171,6 +207,8 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.info("Connected to SVS Subwoofer at %s", self.address)
                 # Notify listeners of connection state change
                 self.async_set_updated_data(self.data)
+                # Fire connected event for device automations
+                self._fire_event(TRIGGER_TYPE_CONNECTED)
                 return
             except asyncio.TimeoutError as err:
                 last_error = err
@@ -208,6 +246,8 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._frame_assembler.reset()
         # Notify listeners of connection state change
         self.async_set_updated_data(self.data)
+        # Fire disconnected event for device automations
+        self._fire_event(TRIGGER_TYPE_DISCONNECTED)
 
     @callback
     def _notification_handler(self, sender: int, data: bytearray) -> None:
@@ -305,6 +345,9 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await self._request_full_settings()
                 # Reset idle disconnect timer
                 self._schedule_idle_disconnect()
+                # Fire preset loaded event for device automations
+                subtype = TRIGGER_SUBTYPE_DEFAULT if preset_number == 4 else f"preset_{preset_number}"
+                self._fire_event(TRIGGER_TYPE_PRESET_LOADED, subtype)
                 return True
             except BleakError as err:
                 _LOGGER.error("Failed to load preset: %s", err)

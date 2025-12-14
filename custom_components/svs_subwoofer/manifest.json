@@ -1,7 +1,7 @@
 {
   "domain": "svs_subwoofer",
   "name": "SVS Subwoofer",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "codeowners": [],
   "config_flow": true,
   "dependencies": ["bluetooth"],

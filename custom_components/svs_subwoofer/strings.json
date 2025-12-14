@@ -129,5 +129,24 @@
         "name": "Polarity (Inverted)"
       }
     }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "connected": "Subwoofer connected",
+      "disconnected": "Subwoofer disconnected",
+      "preset_loaded": "{subtype} loaded"
+    },
+    "trigger_subtype": {
+      "preset_1": "Preset 1",
+      "preset_2": "Preset 2",
+      "preset_3": "Preset 3",
+      "default": "Default preset"
+    },
+    "action_type": {
+      "load_preset": "Load preset",
+      "save_preset": "Save to preset",
+      "set_volume": "Set volume",
+      "reconnect": "Reconnect"
+    }
   }
 }

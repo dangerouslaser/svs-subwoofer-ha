@@ -253,6 +253,61 @@ actions:
       value: 3
 ```
 
+### Device Triggers & Actions
+
+The integration supports device triggers and actions for more powerful automations.
+
+#### Available Triggers
+
+| Trigger | Description |
+|---------|-------------|
+| Subwoofer connected | Fires when the subwoofer connects via Bluetooth |
+| Subwoofer disconnected | Fires when the subwoofer disconnects |
+| Preset loaded | Fires when a preset is loaded (Preset 1, 2, 3, or Default) |
+
+#### Available Actions
+
+| Action | Description | Parameters |
+|--------|-------------|------------|
+| Load preset | Load a preset on the subwoofer | `preset`: 1-4 |
+| Save to preset | Save current settings to a preset slot | `preset`: 1-3 |
+| Set volume | Set the volume level | `volume`: -60 to 0 |
+| Reconnect | Reconnect to the subwoofer | - |
+
+#### Device Trigger Example
+
+```yaml
+automation:
+  - alias: "Notify when subwoofer disconnects"
+    trigger:
+      - platform: device
+        device_id: <your_device_id>
+        domain: svs_subwoofer
+        type: disconnected
+    action:
+      - service: notify.mobile_app
+        data:
+          message: "SVS Subwoofer has disconnected"
+```
+
+#### Device Action Example
+
+```yaml
+automation:
+  - alias: "Movie mode - load preset via device action"
+    trigger:
+      - platform: state
+        entity_id: media_player.tv
+        to: playing
+    action:
+      - device_id: <your_device_id>
+        domain: svs_subwoofer
+        type: load_preset
+        preset: 2
+```
+
+> **Note:** Find your device_id in the automation UI when creating a new automation with device triggers/actions.
+
 ### Troubleshooting
 
 **Device not discovered:**
