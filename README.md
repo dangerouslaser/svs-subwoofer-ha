@@ -29,6 +29,13 @@ Control your SVS subwoofer directly from Home Assistant with full parameter acce
   - Presets (1-4)
   - Standby Mode
 
+### Prerequisites
+
+- **Home Assistant Bluetooth Integration** must be configured and working before adding SVS subwoofers
+  - Go to **Settings** → **Devices & Services** → **Bluetooth**
+  - Ensure your Bluetooth adapter is detected and operational
+  - See [Home Assistant Bluetooth documentation](https://www.home-assistant.io/integrations/bluetooth/) for setup help
+
 ### Installation
 
 #### HACS (Recommended)
@@ -47,10 +54,12 @@ Control your SVS subwoofer directly from Home Assistant with full parameter acce
 
 ### Configuration
 
-1. Go to **Settings** > **Devices & Services**
-2. Click **Add Integration**
-3. Search for "SVS Subwoofer"
-4. Either:
+1. **Ensure Bluetooth is working** in Home Assistant (Settings → Devices & Services → Bluetooth)
+2. **Disconnect the SVS app** on your phone (the subwoofer only allows one BLE connection)
+3. Go to **Settings** → **Devices & Services**
+4. Click **Add Integration**
+5. Search for "SVS Subwoofer"
+6. Either:
    - Select a discovered subwoofer from the list, or
    - Enter the MAC address manually
 
