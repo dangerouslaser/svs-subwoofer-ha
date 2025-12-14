@@ -43,6 +43,15 @@
     "button": {
       "reconnect": {
         "name": "Reconnect"
+      },
+      "save_preset_1": {
+        "name": "Save to Preset 1"
+      },
+      "save_preset_2": {
+        "name": "Save to Preset 2"
+      },
+      "save_preset_3": {
+        "name": "Save to Preset 3"
       }
     },
     "number": {

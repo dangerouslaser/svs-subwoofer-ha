@@ -311,6 +311,45 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._connected = False
                 return False
 
+    async def async_save_preset(self, preset_number: int) -> bool:
+        """Save current settings to a preset slot on the subwoofer.
+
+        Args:
+            preset_number: Preset number (1-3). Note: Preset 4 is factory default and cannot be saved.
+
+        Returns:
+            True if command was sent successfully.
+        """
+        if not 1 <= preset_number <= 3:
+            _LOGGER.error("Invalid preset number for save: %s (must be 1-3)", preset_number)
+            return False
+
+        async with self._command_lock:
+            if not self._connected:
+                try:
+                    await self._connect()
+                except UpdateFailed:
+                    return False
+
+            if not self._client:
+                return False
+
+            frame, meta = svs_encode("PRESETLOADSAVE", f"PRESET{preset_number}SAVE")
+            if not frame:
+                return False
+
+            try:
+                _LOGGER.debug("Saving preset: %s", meta)
+                await self._client.write_gatt_char(SVS_CHAR_UUID, frame)
+                await asyncio.sleep(COMMAND_DELAY)
+                # Reset idle disconnect timer
+                self._schedule_idle_disconnect()
+                return True
+            except BleakError as err:
+                _LOGGER.error("Failed to save preset: %s", err)
+                self._connected = False
+                return False
+
     async def _request_full_settings(self) -> None:
         """Request all settings from subwoofer."""
         if not self._client or not self._connected:
