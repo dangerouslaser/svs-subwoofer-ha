@@ -3,15 +3,15 @@
     "step": {
       "user": {
         "title": "Add SVS Subwoofer",
-        "description": "Select a discovered subwoofer or choose manual entry.",
+        "description": "Select your subwoofer from the list below. Devices are shown by the name you set in the SVS app (e.g., RIGHTSUB, LEFTSUB). Devices marked [SVS] are detected SVS subwoofers.\n\nLeave the name blank to use the device's advertised name.",
         "data": {
           "address": "Device",
-          "name": "Device Name"
+          "name": "Custom Name (optional)"
         }
       },
       "manual": {
         "title": "Manual Setup",
-        "description": "Enter the Bluetooth MAC address of your SVS subwoofer. Format: {mac_format}",
+        "description": "Enter the Bluetooth MAC address of your SVS subwoofer. Format: {mac_format}\n\nTip: Use `bluetoothctl` and `scan on` to find your subwoofer's MAC address.",
         "data": {
           "address": "MAC Address",
           "name": "Device Name"

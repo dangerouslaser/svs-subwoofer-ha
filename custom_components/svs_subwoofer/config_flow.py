@@ -18,6 +18,9 @@ from .const import DOMAIN, SVS_SERVICE_UUID
 
 _LOGGER = logging.getLogger(__name__)
 
+# Known SVS device name patterns (OUI prefix for SVS)
+SVS_MAC_PREFIX = "08:EB:ED"
+
 
 class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle config flow for SVS Subwoofer."""
@@ -100,11 +103,15 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id(formatted_mac)
                 self._abort_if_unique_id_configured()
 
+                # Use device name if user didn't provide a custom name
+                user_name = user_input.get(CONF_NAME, "")
+                final_name = user_name if user_name else (device.name or "SVS Subwoofer")
+
                 return self.async_create_entry(
-                    title=user_input.get(CONF_NAME, device.name or "SVS Subwoofer"),
+                    title=final_name,
                     data={
                         CONF_ADDRESS: address,
-                        CONF_NAME: user_input.get(CONF_NAME, device.name or "SVS Subwoofer"),
+                        CONF_NAME: final_name,
                     },
                 )
             elif address == "manual":
@@ -128,32 +135,57 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
                         },
                     )
 
-        # Discover SVS devices
+        # Discover Bluetooth devices - show all devices with names
+        # Prioritize SVS devices (by MAC prefix or service UUID)
         current_addresses = self._async_current_ids()
+        svs_devices: dict[str, BluetoothServiceInfoBleak] = {}
+        other_devices: dict[str, BluetoothServiceInfoBleak] = {}
+
         for info in async_discovered_service_info(self.hass):
             if info.address in current_addresses:
                 continue
-            # Check if this is an SVS device by service UUID
+            # Skip devices without names (harder to identify)
+            if not info.name or info.name == info.address:
+                continue
+
+            # Check if this is an SVS device by service UUID or MAC prefix
             service_uuids_lower = [s.lower() for s in info.service_uuids]
-            if SVS_SERVICE_UUID.lower() in service_uuids_lower:
-                self._discovered_devices[info.address] = info
+            is_svs = (
+                SVS_SERVICE_UUID.lower() in service_uuids_lower or
+                info.address.upper().startswith(SVS_MAC_PREFIX)
+            )
+
+            if is_svs:
+                svs_devices[info.address] = info
                 _LOGGER.debug("Found SVS device: %s (%s)", info.name, info.address)
+            else:
+                other_devices[info.address] = info
+                _LOGGER.debug("Found other device: %s (%s)", info.name, info.address)
+
+        # Combine: SVS devices first, then others
+        self._discovered_devices = {**svs_devices, **other_devices}
 
         if self._discovered_devices:
             # Show picker with discovered devices
-            addresses = {
-                addr: f"{info.name or 'SVS Subwoofer'} ({addr})"
-                for addr, info in self._discovered_devices.items()
-            }
+            # Mark SVS devices with a prefix for clarity
+            addresses = {}
+            for addr, info in self._discovered_devices.items():
+                is_svs = addr.upper().startswith(SVS_MAC_PREFIX)
+                prefix = "[SVS] " if is_svs else ""
+                addresses[addr] = f"{prefix}{info.name or 'Unknown'} ({addr})"
+
             addresses["manual"] = "Enter MAC address manually..."
 
             return self.async_show_form(
                 step_id="user",
                 data_schema=vol.Schema({
                     vol.Required(CONF_ADDRESS): vol.In(addresses),
-                    vol.Optional(CONF_NAME, default="SVS Subwoofer"): str,
+                    vol.Optional(CONF_NAME, default=""): str,
                 }),
                 errors=errors,
+                description_placeholders={
+                    "hint": "Leave name blank to use the device's advertised name"
+                },
             )
 
         # No devices found - go straight to manual entry

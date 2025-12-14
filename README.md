@@ -60,8 +60,34 @@ Control your SVS subwoofer directly from Home Assistant with full parameter acce
 4. Click **Add Integration**
 5. Search for "SVS Subwoofer"
 6. Either:
-   - Select a discovered subwoofer from the list, or
-   - Enter the MAC address manually
+   - Select your subwoofer by name from the list (e.g., "RIGHTSUB", "LEFTSUB" - the name you set in the SVS app)
+   - Devices marked with `[SVS]` are detected SVS subwoofers
+   - Or choose "Enter MAC address manually" if your device isn't showing
+
+### Finding Your Subwoofer
+
+The integration will show all discovered Bluetooth devices by name. Your subwoofers will appear with the names you configured in the SVS app (e.g., "RIGHTSUB", "LEFTSUB").
+
+**Tips for discovery:**
+- Open the SVS app on your phone and connect to the subwoofer briefly - this helps activate Bluetooth advertising
+- Make sure the subwoofer is powered on and within range
+- Disconnect the SVS app before adding to Home Assistant
+
+**Manual MAC address lookup (if needed):**
+
+If you need to find the MAC address manually, you can use `bluetoothctl` on a Linux system:
+
+```bash
+bluetoothctl
+[bluetooth]# scan on
+# Look for your subwoofer by name:
+# [NEW] Device 08:EB:ED:63:7E:00 RIGHTSUB
+# [NEW] Device 08:EB:ED:69:3E:D0 LEFTSUB
+[bluetooth]# scan off
+[bluetooth]# exit
+```
+
+SVS subwoofers have MAC addresses starting with `08:EB:ED`.
 
 ### Entities
 
