@@ -27,6 +27,9 @@ CONNECTION_TIMEOUT = 60.0
 MAX_CONNECT_RETRIES = 3
 RETRY_DELAY = 2.0
 
+# Auto-disconnect after idle (seconds)
+IDLE_DISCONNECT_TIMEOUT = 60.0
+
 
 class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Coordinator for SVS Subwoofer BLE communication."""
@@ -57,6 +60,7 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._connected = False
         self._command_lock = asyncio.Lock()
         self._disconnect_lock = asyncio.Lock()
+        self._idle_disconnect_task: asyncio.Task | None = None
 
         # Initialize data with defaults
         self.data: dict[str, Any] = {}
@@ -71,11 +75,38 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             model="SB-1000 Pro",
         )
 
+    def _schedule_idle_disconnect(self) -> None:
+        """Schedule disconnection after idle timeout."""
+        self._cancel_idle_disconnect()
+        self._idle_disconnect_task = self.hass.async_create_task(
+            self._idle_disconnect_timer()
+        )
+
+    def _cancel_idle_disconnect(self) -> None:
+        """Cancel any pending idle disconnect."""
+        if self._idle_disconnect_task:
+            self._idle_disconnect_task.cancel()
+            self._idle_disconnect_task = None
+
+    async def _idle_disconnect_timer(self) -> None:
+        """Wait for idle timeout then disconnect."""
+        try:
+            await asyncio.sleep(IDLE_DISCONNECT_TIMEOUT)
+            if self._connected:
+                _LOGGER.debug(
+                    "Idle timeout reached, disconnecting from %s", self.address
+                )
+                await self.async_disconnect()
+        except asyncio.CancelledError:
+            pass  # Timer was cancelled, no action needed
+
     async def _async_setup(self) -> None:
         """Set up the coordinator - called during first refresh."""
         await self._connect()
         # Request initial state
         await self._request_full_settings()
+        # Start idle disconnect timer
+        self._schedule_idle_disconnect()
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from device.
@@ -86,6 +117,7 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if not self._connected:
             await self._connect()
             await self._request_full_settings()
+            self._schedule_idle_disconnect()
         return self.data
 
     async def _connect(self) -> None:
@@ -220,6 +252,8 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await self._client.write_gatt_char(SVS_CHAR_UUID, frame)
                 # Rate limiting per pySVS protocol
                 await asyncio.sleep(COMMAND_DELAY)
+                # Reset idle disconnect timer
+                self._schedule_idle_disconnect()
                 return True
             except BleakError as err:
                 _LOGGER.error("Failed to send command: %s", err)
@@ -260,6 +294,8 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
                 # After loading preset, request current settings
                 await self._request_full_settings()
+                # Reset idle disconnect timer
+                self._schedule_idle_disconnect()
                 return True
             except BleakError as err:
                 _LOGGER.error("Failed to load preset: %s", err)
@@ -290,6 +326,7 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_disconnect(self) -> None:
         """Disconnect from the device."""
+        self._cancel_idle_disconnect()
         async with self._disconnect_lock:
             if self._client and self._client.is_connected:
                 try:
