@@ -120,6 +120,59 @@ The integration creates the following entities for each subwoofer:
 | Room Gain Compensation | Enable/disable room gain |
 | Polarity (Inverted) | Normal (+) or inverted (-) polarity |
 
+### Dashboard Examples
+
+#### Quick Control Card
+A minimal card with just volume and preset - perfect for daily use:
+
+```yaml
+type: entities
+title: SVS Subwoofer
+entities:
+  - entity: number.svs_subwoofer_volume
+    name: Volume
+  - entity: select.svs_subwoofer_preset
+    name: Preset
+```
+
+#### Full Control Card
+A comprehensive card with all main controls:
+
+```yaml
+type: entities
+title: SVS Subwoofer - Full Control
+entities:
+  - type: section
+    label: Status
+  - entity: binary_sensor.svs_subwoofer_connected
+  - entity: button.svs_subwoofer_reconnect
+  - type: section
+    label: Main
+  - entity: number.svs_subwoofer_volume
+  - entity: number.svs_subwoofer_phase
+  - entity: select.svs_subwoofer_preset
+  - entity: select.svs_subwoofer_standby_mode
+  - entity: switch.svs_subwoofer_polarity_inverted
+  - type: section
+    label: Low Pass Filter
+  - entity: switch.svs_subwoofer_low_pass_filter
+  - entity: number.svs_subwoofer_low_pass_filter_frequency
+  - entity: select.svs_subwoofer_low_pass_filter_slope
+  - type: section
+    label: Room Gain
+  - entity: switch.svs_subwoofer_room_gain_compensation
+  - entity: select.svs_subwoofer_room_gain_frequency
+  - entity: select.svs_subwoofer_room_gain_slope
+  - type: section
+    label: PEQ Band 1
+  - entity: switch.svs_subwoofer_peq1
+  - entity: number.svs_subwoofer_peq1_frequency
+  - entity: number.svs_subwoofer_peq1_boost
+  - entity: number.svs_subwoofer_peq1_q_factor
+```
+
+> **Note:** Replace `svs_subwoofer` with your actual device name (e.g., `rightsub`, `leftsub`).
+
 ### Troubleshooting
 
 **Device not discovered:**
