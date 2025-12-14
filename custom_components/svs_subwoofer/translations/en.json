@@ -35,6 +35,16 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "connected": {
+        "name": "Connected"
+      }
+    },
+    "button": {
+      "reconnect": {
+        "name": "Reconnect"
+      }
+    },
     "number": {
       "volume": {
         "name": "Volume"

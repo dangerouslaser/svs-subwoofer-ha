@@ -75,6 +75,11 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             model="SB-1000 Pro",
         )
 
+    @property
+    def is_connected(self) -> bool:
+        """Return True if connected to the subwoofer."""
+        return self._connected
+
     def _schedule_idle_disconnect(self) -> None:
         """Schedule disconnection after idle timeout."""
         self._cancel_idle_disconnect()
@@ -164,6 +169,8 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await self._client.start_notify(SVS_CHAR_UUID, self._notification_handler)
                 self._connected = True
                 _LOGGER.info("Connected to SVS Subwoofer at %s", self.address)
+                # Notify listeners of connection state change
+                self.async_set_updated_data(self.data)
                 return
             except asyncio.TimeoutError as err:
                 last_error = err
@@ -199,6 +206,8 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         _LOGGER.warning("Disconnected from SVS Subwoofer at %s", self.address)
         self._connected = False
         self._frame_assembler.reset()
+        # Notify listeners of connection state change
+        self.async_set_updated_data(self.data)
 
     @callback
     def _notification_handler(self, sender: int, data: bytearray) -> None:
