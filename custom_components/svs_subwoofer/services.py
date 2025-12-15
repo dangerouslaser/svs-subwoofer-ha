@@ -6,18 +6,17 @@ import logging
 from typing import TYPE_CHECKING
 
 import voluptuous as vol
-
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 
 from .const import (
     DOMAIN,
-    SERVICE_SYNC_FROM,
-    SERVICE_SET_VOLUME,
     SERVICE_LOAD_PRESET,
+    SERVICE_SET_VOLUME,
+    SERVICE_SYNC_FROM,
     SYNCABLE_PARAMS,
-    VOLUME_MIN,
     VOLUME_MAX,
+    VOLUME_MIN,
 )
 
 if TYPE_CHECKING:

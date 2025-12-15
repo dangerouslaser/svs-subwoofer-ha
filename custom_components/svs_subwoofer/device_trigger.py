@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import voluptuous as vol
-
 from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
 from homeassistant.components.homeassistant.triggers import event as event_trigger
 from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
@@ -17,11 +16,11 @@ from homeassistant.helpers.typing import ConfigType
 from .const import (
     DOMAIN,
     EVENT_SVS_SUBWOOFER,
+    TRIGGER_SUBTYPES_PRESET,
     TRIGGER_TYPE_CONNECTED,
     TRIGGER_TYPE_DISCONNECTED,
     TRIGGER_TYPE_PRESET_LOADED,
     TRIGGER_TYPES,
-    TRIGGER_SUBTYPES_PRESET,
 )
 
 CONF_SUBTYPE = "subtype"

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
@@ -15,12 +15,12 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import (
     DOMAIN,
     LPF_SLOPES,
+    PRESET_MAP,
+    PRESETS,
     ROOM_GAIN_FREQUENCIES,
     ROOM_GAIN_SLOPES,
-    STANDBY_MODES,
     STANDBY_MODE_MAP,
-    PRESETS,
-    PRESET_MAP,
+    STANDBY_MODES,
 )
 from .coordinator import SVSSubwooferCoordinator
 

@@ -6,22 +6,21 @@ import logging
 from typing import Any
 
 import voluptuous as vol
-
 from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_TYPE
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 
 from .const import (
-    DOMAIN,
     ACTION_TYPE_LOAD_PRESET,
+    ACTION_TYPE_RECONNECT,
     ACTION_TYPE_SAVE_PRESET,
     ACTION_TYPE_SET_VOLUME,
-    ACTION_TYPE_RECONNECT,
     ACTION_TYPES,
     CONF_PRESET,
     CONF_VOLUME,
-    VOLUME_MIN,
+    DOMAIN,
     VOLUME_MAX,
+    VOLUME_MIN,
 )
 
 _LOGGER = logging.getLogger(__name__)

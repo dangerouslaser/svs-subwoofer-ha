@@ -6,10 +6,10 @@ https://github.com/logon84/pySVS
 
 from __future__ import annotations
 
+import logging
 from binascii import crc_hqx, hexlify
 from dataclasses import dataclass
 from enum import Enum
-import logging
 from typing import Any
 
 _LOGGER = logging.getLogger(__name__)

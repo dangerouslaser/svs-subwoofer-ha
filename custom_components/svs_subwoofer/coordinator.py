@@ -8,7 +8,6 @@ from typing import Any
 
 from bleak import BleakClient
 from bleak.exc import BleakError
-
 from homeassistant.components.bluetooth import async_ble_device_from_address
 from homeassistant.const import CONF_DEVICE_ID, CONF_TYPE
 from homeassistant.core import HomeAssistant, callback
@@ -17,16 +16,16 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
-    DOMAIN,
-    SVS_CHAR_UUID,
     COMMAND_DELAY,
+    DOMAIN,
     EVENT_SVS_SUBWOOFER,
+    SVS_CHAR_UUID,
+    TRIGGER_SUBTYPE_DEFAULT,
     TRIGGER_TYPE_CONNECTED,
     TRIGGER_TYPE_DISCONNECTED,
     TRIGGER_TYPE_PRESET_LOADED,
-    TRIGGER_SUBTYPE_DEFAULT,
 )
-from .svs_protocol import svs_encode, FrameAssembler
+from .svs_protocol import FrameAssembler, svs_encode
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -249,7 +248,7 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # Fire connected event for device automations
                 self._fire_event(TRIGGER_TYPE_CONNECTED)
                 return
-            except asyncio.TimeoutError as err:
+            except TimeoutError as err:
                 last_error = err
                 _LOGGER.warning(
                     "Timeout connecting to %s (attempt %d/%d)",

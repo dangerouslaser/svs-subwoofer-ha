@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from homeassistant.components.number import (
     NumberEntity,
@@ -18,24 +18,24 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     DOMAIN,
-    VOLUME_MIN,
-    VOLUME_MAX,
-    VOLUME_STEP,
-    PHASE_MIN,
-    PHASE_MAX,
-    PHASE_STEP,
-    LPF_FREQ_MIN,
     LPF_FREQ_MAX,
+    LPF_FREQ_MIN,
     LPF_FREQ_STEP,
-    PEQ_FREQ_MIN,
-    PEQ_FREQ_MAX,
-    PEQ_FREQ_STEP,
-    PEQ_BOOST_MIN,
     PEQ_BOOST_MAX,
+    PEQ_BOOST_MIN,
     PEQ_BOOST_STEP,
-    PEQ_Q_MIN,
+    PEQ_FREQ_MAX,
+    PEQ_FREQ_MIN,
+    PEQ_FREQ_STEP,
     PEQ_Q_MAX,
+    PEQ_Q_MIN,
     PEQ_Q_STEP,
+    PHASE_MAX,
+    PHASE_MIN,
+    PHASE_STEP,
+    VOLUME_MAX,
+    VOLUME_MIN,
+    VOLUME_STEP,
 )
 from .coordinator import SVSSubwooferCoordinator
 
