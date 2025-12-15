@@ -90,3 +90,34 @@ ACTION_TYPES: Final = {
 # Action parameters
 CONF_PRESET: Final = "preset"
 CONF_VOLUME: Final = "volume"
+
+# Service names
+SERVICE_SYNC_FROM: Final = "sync_from"
+SERVICE_SET_VOLUME: Final = "set_volume"
+SERVICE_LOAD_PRESET: Final = "load_preset"
+
+# Parameters that can be synced between subwoofers
+SYNCABLE_PARAMS: Final = [
+    "VOLUME",
+    "PHASE",
+    "LOW_PASS_FILTER_ENABLE",
+    "LOW_PASS_FILTER_FREQ",
+    "LOW_PASS_FILTER_SLOPE",
+    "PEQ1_ENABLE",
+    "PEQ1_FREQ",
+    "PEQ1_BOOST",
+    "PEQ1_QFACTOR",
+    "PEQ2_ENABLE",
+    "PEQ2_FREQ",
+    "PEQ2_BOOST",
+    "PEQ2_QFACTOR",
+    "PEQ3_ENABLE",
+    "PEQ3_FREQ",
+    "PEQ3_BOOST",
+    "PEQ3_QFACTOR",
+    "ROOM_GAIN_ENABLE",
+    "ROOM_GAIN_FREQ",
+    "ROOM_GAIN_SLOPE",
+    "STANDBY",
+    "POLARITY",
+]

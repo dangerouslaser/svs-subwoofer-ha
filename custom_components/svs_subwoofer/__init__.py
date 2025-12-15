@@ -14,6 +14,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN
 from .coordinator import SVSSubwooferCoordinator
+from .services import async_setup_services, async_unload_services
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,6 +48,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: SVSConfigEntry) -> bool:
     entry.runtime_data = coordinator
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
+    # Register services (once, when first device is added)
+    if len(hass.data[DOMAIN]) == 1:
+        await async_setup_services(hass)
+
     # Set up platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -65,6 +70,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: SVSConfigEntry) -> bool
         # Disconnect from device
         coordinator: SVSSubwooferCoordinator = hass.data[DOMAIN].pop(entry.entry_id)
         await coordinator.async_disconnect()
+
+        # Unregister services when last device is removed
+        if not hass.data[DOMAIN]:
+            async_unload_services(hass)
 
     return unload_ok
 

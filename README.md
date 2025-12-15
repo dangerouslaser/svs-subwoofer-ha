@@ -261,6 +261,215 @@ automation:
         preset: 2
 ```
 
+## Multi-Subwoofer Control
+
+When you have multiple SVS subwoofers, you can control them together using custom services. These are available in **Developer Tools** → **Services**.
+
+### Available Services
+
+| Service | Description |
+|---------|-------------|
+| `svs_subwoofer.sync_from` | Copy all settings from one subwoofer to others |
+| `svs_subwoofer.set_volume` | Set volume on multiple subwoofers (with optional offsets) |
+| `svs_subwoofer.load_preset` | Load the same preset on multiple subwoofers |
+
+### Sync Settings Between Subwoofers
+
+Copy all settings (volume, phase, EQ, LPF, room gain, polarity, standby) from one subwoofer to another:
+
+```yaml
+service: svs_subwoofer.sync_from
+data:
+  source_device_id: <left_sub_device_id>
+  target_device_ids:
+    - <right_sub_device_id>
+```
+
+### Set Volume on Multiple Subwoofers
+
+Set the same volume on all subwoofers, with optional per-device offsets for room correction:
+
+```yaml
+service: svs_subwoofer.set_volume
+data:
+  device_ids:
+    - <left_sub_device_id>
+    - <right_sub_device_id>
+  volume: -25
+  offsets:
+    <right_sub_device_id>: -3  # Right sub 3dB quieter
+```
+
+### Load Preset on Multiple Subwoofers
+
+Load the same preset on all subwoofers simultaneously:
+
+```yaml
+service: svs_subwoofer.load_preset
+data:
+  device_ids:
+    - <left_sub_device_id>
+    - <right_sub_device_id>
+  preset: "2"  # or "Default"
+```
+
+### Multi-Sub Automation Example
+
+```yaml
+automation:
+  - alias: "Movie Mode - Sync both subs"
+    trigger:
+      - platform: state
+        entity_id: media_player.tv
+        to: playing
+        for:
+          seconds: 5
+    action:
+      - service: svs_subwoofer.load_preset
+        data:
+          device_ids:
+            - <left_sub_device_id>
+            - <right_sub_device_id>
+          preset: "2"
+      - service: svs_subwoofer.set_volume
+        data:
+          device_ids:
+            - <left_sub_device_id>
+            - <right_sub_device_id>
+          volume: -20
+```
+
+> **Tip:** Find device IDs in **Settings** → **Devices & Services** → **SVS Subwoofer** → click on a device → look at the URL or "Device info" section.
+
+### Multi-Sub Dashboard Card
+
+Create a dedicated control panel for managing multiple subwoofers together.
+
+**Step 1: Create Helper** (Settings → Devices & Services → Helpers → Create Helper → Number)
+
+- Name: `All Subwoofers Volume`
+- Icon: `mdi:volume-high`
+- Min: `-60`, Max: `0`, Step: `1`
+- Unit: `dB`
+
+**Step 2: Create Scripts** (Settings → Automations & Scenes → Scripts → Add Script)
+
+```yaml
+# Script 1: Sync Left to Right
+alias: "Sync Left → Right Sub"
+icon: mdi:sync
+sequence:
+  - service: svs_subwoofer.sync_from
+    data:
+      source_device_id: <left_sub_device_id>
+      target_device_ids:
+        - <right_sub_device_id>
+
+# Script 2: Movie Mode
+alias: "Movie Mode (All Subs)"
+icon: mdi:movie
+sequence:
+  - service: svs_subwoofer.load_preset
+    data:
+      device_ids:
+        - <left_sub_device_id>
+        - <right_sub_device_id>
+      preset: "2"
+
+# Script 3: Music Mode
+alias: "Music Mode (All Subs)"
+icon: mdi:music
+sequence:
+  - service: svs_subwoofer.load_preset
+    data:
+      device_ids:
+        - <left_sub_device_id>
+        - <right_sub_device_id>
+      preset: "1"
+
+# Script 4: Default Settings
+alias: "Reset to Default (All Subs)"
+icon: mdi:restore
+sequence:
+  - service: svs_subwoofer.load_preset
+    data:
+      device_ids:
+        - <left_sub_device_id>
+        - <right_sub_device_id>
+      preset: "Default"
+```
+
+**Step 3: Create Automation** (to sync volume slider)
+
+```yaml
+alias: "Sync group volume slider to all subs"
+trigger:
+  - platform: state
+    entity_id: input_number.all_subwoofers_volume
+action:
+  - service: svs_subwoofer.set_volume
+    data:
+      device_ids:
+        - <left_sub_device_id>
+        - <right_sub_device_id>
+      volume: "{{ states('input_number.all_subwoofers_volume') | int }}"
+mode: single
+```
+
+**Step 4: Dashboard Card**
+
+```yaml
+type: vertical-stack
+cards:
+  - type: markdown
+    content: "## 🔊 Multi-Sub Control"
+
+  - type: entities
+    entities:
+      - entity: input_number.all_subwoofers_volume
+        name: Group Volume
+
+  - type: horizontal-stack
+    cards:
+      - type: button
+        name: Movie
+        icon: mdi:movie
+        tap_action:
+          action: call-service
+          service: script.movie_mode_all_subs
+      - type: button
+        name: Music
+        icon: mdi:music
+        tap_action:
+          action: call-service
+          service: script.music_mode_all_subs
+      - type: button
+        name: Default
+        icon: mdi:restore
+        tap_action:
+          action: call-service
+          service: script.reset_to_default_all_subs
+
+  - type: horizontal-stack
+    cards:
+      - type: button
+        name: Sync L→R
+        icon: mdi:sync
+        tap_action:
+          action: call-service
+          service: script.sync_left_to_right_sub
+
+  - type: entities
+    title: Individual Status
+    entities:
+      - entity: binary_sensor.leftsub_connected
+        name: Left Sub
+      - entity: binary_sensor.rightsub_connected
+        name: Right Sub
+```
+
+> **Note:** Replace `<left_sub_device_id>` and `<right_sub_device_id>` with your actual device IDs, and adjust entity names to match your subwoofer names (e.g., `leftsub`, `rightsub`).
+
 ## Supported Devices
 
 Works with any SVS subwoofer that supports the official SVS app:

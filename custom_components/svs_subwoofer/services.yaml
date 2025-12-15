@@ -1,0 +1,78 @@
+sync_from:
+  name: Sync Settings From
+  description: Copy all settings from one SVS subwoofer to one or more other subwoofers.
+  fields:
+    source_device_id:
+      name: Source Device
+      description: The subwoofer to copy settings from.
+      required: true
+      selector:
+        device:
+          integration: svs_subwoofer
+    target_device_ids:
+      name: Target Devices
+      description: The subwoofer(s) to copy settings to.
+      required: true
+      selector:
+        device:
+          integration: svs_subwoofer
+          multiple: true
+
+set_volume:
+  name: Set Volume
+  description: Set volume on multiple SVS subwoofers simultaneously, with optional per-device offsets.
+  fields:
+    device_ids:
+      name: Devices
+      description: The subwoofer(s) to adjust.
+      required: true
+      selector:
+        device:
+          integration: svs_subwoofer
+          multiple: true
+    volume:
+      name: Volume
+      description: The volume level in dB (-60 to 0).
+      required: true
+      selector:
+        number:
+          min: -60
+          max: 0
+          step: 1
+          unit_of_measurement: dB
+          mode: slider
+    offsets:
+      name: Per-Device Offsets
+      description: Optional volume offsets per device (device_id to dB offset mapping). Useful for room correction.
+      required: false
+      example: '{"device_id_here": -3}'
+      selector:
+        object:
+
+load_preset:
+  name: Load Preset
+  description: Load the same preset on multiple SVS subwoofers simultaneously.
+  fields:
+    device_ids:
+      name: Devices
+      description: The subwoofer(s) to update.
+      required: true
+      selector:
+        device:
+          integration: svs_subwoofer
+          multiple: true
+    preset:
+      name: Preset
+      description: The preset to load (1, 2, 3, or Default).
+      required: true
+      selector:
+        select:
+          options:
+            - label: "Preset 1"
+              value: "1"
+            - label: "Preset 2"
+              value: "2"
+            - label: "Preset 3"
+              value: "3"
+            - label: "Default"
+              value: "Default"
