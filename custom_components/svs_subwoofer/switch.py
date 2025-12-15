@@ -1,4 +1,5 @@
 """Switch platform for SVS Subwoofer."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -80,8 +81,7 @@ async def async_setup_entry(
     coordinator: SVSSubwooferCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
-        SVSSwitchEntity(coordinator, description)
-        for description in SWITCH_DESCRIPTIONS
+        SVSSwitchEntity(coordinator, description) for description in SWITCH_DESCRIPTIONS
     )
 
 

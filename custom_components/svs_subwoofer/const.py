@@ -1,4 +1,5 @@
 """Constants for SVS Subwoofer integration."""
+
 from __future__ import annotations
 
 from typing import Final
@@ -61,7 +62,11 @@ EVENT_SVS_SUBWOOFER: Final = "svs_subwoofer_event"
 TRIGGER_TYPE_CONNECTED: Final = "connected"
 TRIGGER_TYPE_DISCONNECTED: Final = "disconnected"
 TRIGGER_TYPE_PRESET_LOADED: Final = "preset_loaded"
-TRIGGER_TYPES: Final = {TRIGGER_TYPE_CONNECTED, TRIGGER_TYPE_DISCONNECTED, TRIGGER_TYPE_PRESET_LOADED}
+TRIGGER_TYPES: Final = {
+    TRIGGER_TYPE_CONNECTED,
+    TRIGGER_TYPE_DISCONNECTED,
+    TRIGGER_TYPE_PRESET_LOADED,
+}
 
 # Device automation - Trigger subtypes (for presets)
 TRIGGER_SUBTYPE_PRESET_1: Final = "preset_1"

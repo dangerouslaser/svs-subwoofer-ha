@@ -1,4 +1,5 @@
 """Config flow for SVS Subwoofer integration."""
+
 from __future__ import annotations
 
 import logging
@@ -60,7 +61,9 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="no_device")
 
         if user_input is not None:
-            name = user_input.get(CONF_NAME, self._discovery_info.name or "SVS Subwoofer")
+            name = user_input.get(
+                CONF_NAME, self._discovery_info.name or "SVS Subwoofer"
+            )
             return self.async_create_entry(
                 title=name,
                 data={
@@ -71,12 +74,13 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="bluetooth_confirm",
-            data_schema=vol.Schema({
-                vol.Optional(
-                    CONF_NAME,
-                    default=self._discovery_info.name or "SVS Subwoofer"
-                ): str,
-            }),
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_NAME, default=self._discovery_info.name or "SVS Subwoofer"
+                    ): str,
+                }
+            ),
             description_placeholders={
                 "name": self._discovery_info.name or "SVS Subwoofer",
                 "address": self._discovery_info.address,
@@ -105,7 +109,9 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
 
                 # Use device name if user didn't provide a custom name
                 user_name = user_input.get(CONF_NAME, "")
-                final_name = user_name if user_name else (device.name or "SVS Subwoofer")
+                final_name = (
+                    user_name if user_name else (device.name or "SVS Subwoofer")
+                )
 
                 return self.async_create_entry(
                     title=final_name,
@@ -151,8 +157,8 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
             # Check if this is an SVS device by service UUID or MAC prefix
             service_uuids_lower = [s.lower() for s in info.service_uuids]
             is_svs = (
-                SVS_SERVICE_UUID.lower() in service_uuids_lower or
-                info.address.upper().startswith(SVS_MAC_PREFIX)
+                SVS_SERVICE_UUID.lower() in service_uuids_lower
+                or info.address.upper().startswith(SVS_MAC_PREFIX)
             )
 
             if is_svs:
@@ -178,10 +184,12 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
 
             return self.async_show_form(
                 step_id="user",
-                data_schema=vol.Schema({
-                    vol.Required(CONF_ADDRESS): vol.In(addresses),
-                    vol.Optional(CONF_NAME, default=""): str,
-                }),
+                data_schema=vol.Schema(
+                    {
+                        vol.Required(CONF_ADDRESS): vol.In(addresses),
+                        vol.Optional(CONF_NAME, default=""): str,
+                    }
+                ),
                 errors=errors,
                 description_placeholders={
                     "hint": "Leave name blank to use the device's advertised name"
@@ -202,7 +210,9 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
 
             # Validate MAC address format
             mac_clean = address.replace(":", "")
-            if len(mac_clean) != 12 or not all(c in "0123456789ABCDEF" for c in mac_clean):
+            if len(mac_clean) != 12 or not all(
+                c in "0123456789ABCDEF" for c in mac_clean
+            ):
                 errors[CONF_ADDRESS] = "invalid_mac"
             else:
                 formatted_mac = format_mac(address)
@@ -219,12 +229,12 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="manual",
-            data_schema=vol.Schema({
-                vol.Required(CONF_ADDRESS): str,
-                vol.Optional(CONF_NAME, default="SVS Subwoofer"): str,
-            }),
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_ADDRESS): str,
+                    vol.Optional(CONF_NAME, default="SVS Subwoofer"): str,
+                }
+            ),
             errors=errors,
-            description_placeholders={
-                "mac_format": "AA:BB:CC:DD:EE:FF"
-            },
+            description_placeholders={"mac_format": "AA:BB:CC:DD:EE:FF"},
         )

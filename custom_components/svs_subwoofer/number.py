@@ -1,9 +1,9 @@
 """Number platform for SVS Subwoofer."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import Any
 
 from homeassistant.components.number import (
     NumberEntity,
@@ -204,8 +204,7 @@ async def async_setup_entry(
     coordinator: SVSSubwooferCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
-        SVSNumberEntity(coordinator, description)
-        for description in NUMBER_DESCRIPTIONS
+        SVSNumberEntity(coordinator, description) for description in NUMBER_DESCRIPTIONS
     )
 
 

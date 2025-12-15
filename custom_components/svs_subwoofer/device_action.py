@@ -1,4 +1,5 @@
 """Device actions for SVS Subwoofer."""
+
 from __future__ import annotations
 
 import logging
@@ -29,7 +30,9 @@ ACTION_SCHEMA = cv.DEVICE_ACTION_BASE_SCHEMA.extend(
     {
         vol.Required(CONF_TYPE): vol.In(ACTION_TYPES),
         vol.Optional(CONF_PRESET): vol.All(vol.Coerce(int), vol.Range(min=1, max=4)),
-        vol.Optional(CONF_VOLUME): vol.All(vol.Coerce(int), vol.Range(min=VOLUME_MIN, max=VOLUME_MAX)),
+        vol.Optional(CONF_VOLUME): vol.All(
+            vol.Coerce(int), vol.Range(min=VOLUME_MIN, max=VOLUME_MAX)
+        ),
     }
 )
 
@@ -63,9 +66,7 @@ async def async_get_actions(
     return actions
 
 
-def _get_coordinator_for_device(
-    hass: HomeAssistant, device_id: str
-):
+def _get_coordinator_for_device(hass: HomeAssistant, device_id: str):
     """Get the coordinator for a device by its device ID.
 
     Uses device registry to find the MAC address identifier,
@@ -89,7 +90,7 @@ def _get_coordinator_for_device(
 
     # Find coordinator by MAC address match
     for coord in hass.data.get(DOMAIN, {}).values():
-        if hasattr(coord, 'address') and coord.address == device_address:
+        if hasattr(coord, "address") and coord.address == device_address:
             return coord
 
     return None
@@ -119,7 +120,9 @@ async def async_call_action_from_config(
     elif action_type == ACTION_TYPE_SAVE_PRESET:
         preset = config.get(CONF_PRESET, 1)
         if preset > 3:
-            _LOGGER.error("Cannot save to preset %d (only presets 1-3 can be saved)", preset)
+            _LOGGER.error(
+                "Cannot save to preset %d (only presets 1-3 can be saved)", preset
+            )
             return
         await coordinator.async_save_preset(preset)
 

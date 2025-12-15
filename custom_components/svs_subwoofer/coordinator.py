@@ -1,4 +1,5 @@
 """DataUpdateCoordinator for SVS Subwoofer."""
+
 from __future__ import annotations
 
 import asyncio
@@ -8,11 +9,9 @@ from typing import Any
 from bleak import BleakClient
 from bleak.exc import BleakError
 
-from homeassistant.components import bluetooth
 from homeassistant.components.bluetooth import async_ble_device_from_address
 from homeassistant.const import CONF_DEVICE_ID, CONF_TYPE
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -212,7 +211,9 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.warning(
                     "Device %s not found (attempt %d/%d). "
                     "Ensure subwoofer is powered on and not connected to another device.",
-                    self.address, attempt + 1, MAX_CONNECT_RETRIES
+                    self.address,
+                    attempt + 1,
+                    MAX_CONNECT_RETRIES,
                 )
                 if attempt < MAX_CONNECT_RETRIES - 1:
                     await asyncio.sleep(RETRY_DELAY)
@@ -224,7 +225,9 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
             _LOGGER.debug(
                 "Connecting to SVS Subwoofer at %s (attempt %d/%d)",
-                self.address, attempt + 1, MAX_CONNECT_RETRIES
+                self.address,
+                attempt + 1,
+                MAX_CONNECT_RETRIES,
             )
 
             try:
@@ -234,10 +237,11 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     disconnected_callback=self._on_disconnect,
                 )
                 await asyncio.wait_for(
-                    self._client.connect(),
-                    timeout=CONNECTION_TIMEOUT
+                    self._client.connect(), timeout=CONNECTION_TIMEOUT
                 )
-                await self._client.start_notify(SVS_CHAR_UUID, self._notification_handler)
+                await self._client.start_notify(
+                    SVS_CHAR_UUID, self._notification_handler
+                )
                 self._connected = True
                 _LOGGER.info("Connected to SVS Subwoofer at %s", self.address)
                 # Notify listeners of connection state change
@@ -249,13 +253,18 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 last_error = err
                 _LOGGER.warning(
                     "Timeout connecting to %s (attempt %d/%d)",
-                    self.address, attempt + 1, MAX_CONNECT_RETRIES
+                    self.address,
+                    attempt + 1,
+                    MAX_CONNECT_RETRIES,
                 )
             except BleakError as err:
                 last_error = err
                 _LOGGER.warning(
                     "BLE error connecting to %s: %s (attempt %d/%d)",
-                    self.address, err, attempt + 1, MAX_CONNECT_RETRIES
+                    self.address,
+                    err,
+                    attempt + 1,
+                    MAX_CONNECT_RETRIES,
                 )
 
             # Clean up failed client
@@ -303,9 +312,7 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # Notify listeners of new data
                 self.async_set_updated_data(self.data)
 
-    async def async_send_command(
-        self, param: str, value: Any
-    ) -> bool:
+    async def async_send_command(self, param: str, value: Any) -> bool:
         """Send a command to the subwoofer.
 
         Args:
@@ -392,7 +399,11 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # Reset idle disconnect timer
                 self._schedule_idle_disconnect()
                 # Fire preset loaded event for device automations
-                subtype = TRIGGER_SUBTYPE_DEFAULT if preset_number == 4 else f"preset_{preset_number}"
+                subtype = (
+                    TRIGGER_SUBTYPE_DEFAULT
+                    if preset_number == 4
+                    else f"preset_{preset_number}"
+                )
                 self._fire_event(TRIGGER_TYPE_PRESET_LOADED, subtype)
                 return True
             except BleakError as err:
@@ -410,7 +421,9 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             True if command was sent successfully.
         """
         if not 1 <= preset_number <= 3:
-            _LOGGER.error("Invalid preset number for save: %s (must be 1-3)", preset_number)
+            _LOGGER.error(
+                "Invalid preset number for save: %s (must be 1-3)", preset_number
+            )
             return False
 
         async with self._command_lock:

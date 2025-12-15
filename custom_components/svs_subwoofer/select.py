@@ -1,9 +1,9 @@
 """Select platform for SVS Subwoofer."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import Any
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
@@ -105,8 +105,7 @@ async def async_setup_entry(
     coordinator: SVSSubwooferCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
-        SVSSelectEntity(coordinator, description)
-        for description in SELECT_DESCRIPTIONS
+        SVSSelectEntity(coordinator, description) for description in SELECT_DESCRIPTIONS
     )
 
 
@@ -144,7 +143,7 @@ class SVSSelectEntity(CoordinatorEntity[SVSSubwooferCoordinator], SelectEntity):
             custom_name = self.coordinator.data.get(name_key)
             if custom_name and custom_name.strip():
                 # Use custom name, strip null bytes and whitespace
-                preset_options.append(custom_name.strip().replace('\x00', ''))
+                preset_options.append(custom_name.strip().replace("\x00", ""))
             else:
                 preset_options.append(f"Preset {i}")
         preset_options.append("Default")
@@ -182,7 +181,11 @@ class SVSSelectEntity(CoordinatorEntity[SVSSubwooferCoordinator], SelectEntity):
         _LOGGER.debug("Selecting %s for %s", option, self.entity_description.key)
 
         # Use dynamic preset map for presets
-        value_map = self._preset_value_map if self.entity_description.is_preset else self.entity_description.value_map
+        value_map = (
+            self._preset_value_map
+            if self.entity_description.is_preset
+            else self.entity_description.value_map
+        )
         value = value_map.get(option)
         if value is None:
             _LOGGER.error("Invalid option: %s", option)

@@ -1,4 +1,5 @@
 """Button platform for SVS Subwoofer."""
+
 from __future__ import annotations
 
 import logging
@@ -66,7 +67,9 @@ class SVSSavePresetButton(CoordinatorEntity[SVSSubwooferCoordinator], ButtonEnti
     _attr_icon = "mdi:content-save"
     _attr_entity_category = EntityCategory.CONFIG
 
-    def __init__(self, coordinator: SVSSubwooferCoordinator, preset_number: int) -> None:
+    def __init__(
+        self, coordinator: SVSSubwooferCoordinator, preset_number: int
+    ) -> None:
         """Initialize the button."""
         super().__init__(coordinator)
         self._preset_number = preset_number

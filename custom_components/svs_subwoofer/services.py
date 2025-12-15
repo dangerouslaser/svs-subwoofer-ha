@@ -1,4 +1,5 @@
 """Services for SVS Subwoofer integration."""
+
 from __future__ import annotations
 
 import logging
@@ -145,7 +146,9 @@ async def async_set_volume(hass: HomeAssistant, call: ServiceCall) -> None:
     base_volume = call.data[ATTR_VOLUME]
     offsets = call.data.get(ATTR_OFFSETS, {})
 
-    _LOGGER.info("Setting volume to %d dB on %d device(s)", base_volume, len(device_ids))
+    _LOGGER.info(
+        "Setting volume to %d dB on %d device(s)", base_volume, len(device_ids)
+    )
 
     for device_id in device_ids:
         coord = _get_coordinator_for_device(hass, device_id)
@@ -167,9 +170,7 @@ async def async_set_volume(hass: HomeAssistant, call: ServiceCall) -> None:
                 offset,
             )
         except Exception as err:
-            _LOGGER.warning(
-                "Failed to set volume on %s: %s", coord.device_name, err
-            )
+            _LOGGER.warning("Failed to set volume on %s: %s", coord.device_name, err)
 
 
 async def async_load_preset(hass: HomeAssistant, call: ServiceCall) -> None:
@@ -186,7 +187,9 @@ async def async_load_preset(hass: HomeAssistant, call: ServiceCall) -> None:
         "3": 3,
         "4": 4,
     }
-    preset_num = preset_map.get(str(preset), preset) if isinstance(preset, str) else preset
+    preset_num = (
+        preset_map.get(str(preset), preset) if isinstance(preset, str) else preset
+    )
 
     _LOGGER.info("Loading preset %s on %d device(s)", preset_num, len(device_ids))
 
@@ -200,9 +203,7 @@ async def async_load_preset(hass: HomeAssistant, call: ServiceCall) -> None:
             await coord.async_load_preset(preset_num)
             _LOGGER.debug("Loaded preset %s on %s", preset_num, coord.device_name)
         except Exception as err:
-            _LOGGER.warning(
-                "Failed to load preset on %s: %s", coord.device_name, err
-            )
+            _LOGGER.warning("Failed to load preset on %s: %s", coord.device_name, err)
 
 
 async def async_setup_services(hass: HomeAssistant) -> None:

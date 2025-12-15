@@ -1,4 +1,5 @@
 """Binary sensor platform for SVS Subwoofer."""
+
 from __future__ import annotations
 
 import logging
@@ -29,7 +30,9 @@ async def async_setup_entry(
     async_add_entities([SVSConnectionSensor(coordinator)])
 
 
-class SVSConnectionSensor(CoordinatorEntity[SVSSubwooferCoordinator], BinarySensorEntity):
+class SVSConnectionSensor(
+    CoordinatorEntity[SVSSubwooferCoordinator], BinarySensorEntity
+):
     """Binary sensor showing Bluetooth connection status."""
 
     _attr_has_entity_name = True

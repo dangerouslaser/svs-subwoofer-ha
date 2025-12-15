@@ -1,4 +1,5 @@
 """Device triggers for SVS Subwoofer."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -63,11 +64,13 @@ async def async_get_triggers(
 
     # Add preset loaded triggers (with subtypes)
     for subtype in TRIGGER_SUBTYPES_PRESET:
-        triggers.append({
-            **base_trigger,
-            CONF_TYPE: TRIGGER_TYPE_PRESET_LOADED,
-            CONF_SUBTYPE: subtype,
-        })
+        triggers.append(
+            {
+                **base_trigger,
+                CONF_TYPE: TRIGGER_TYPE_PRESET_LOADED,
+                CONF_SUBTYPE: subtype,
+            }
+        )
 
     return triggers
 
