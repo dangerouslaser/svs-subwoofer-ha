@@ -63,6 +63,38 @@ async def async_get_actions(
     return actions
 
 
+def _get_coordinator_for_device(
+    hass: HomeAssistant, device_id: str
+):
+    """Get the coordinator for a device by its device ID.
+
+    Uses device registry to find the MAC address identifier,
+    then matches against coordinators.
+    """
+    device_registry = dr.async_get(hass)
+    device = device_registry.async_get(device_id)
+
+    if not device:
+        return None
+
+    # Find the MAC address from device identifiers
+    device_address = None
+    for identifier in device.identifiers:
+        if identifier[0] == DOMAIN:
+            device_address = identifier[1]
+            break
+
+    if not device_address:
+        return None
+
+    # Find coordinator by MAC address match
+    for coord in hass.data.get(DOMAIN, {}).values():
+        if hasattr(coord, 'address') and coord.address == device_address:
+            return coord
+
+    return None
+
+
 async def async_call_action_from_config(
     hass: HomeAssistant,
     config: dict[str, Any],
@@ -74,19 +106,7 @@ async def async_call_action_from_config(
     action_type = config[CONF_TYPE]
 
     # Get the coordinator for this device
-    device_registry = dr.async_get(hass)
-    device = device_registry.async_get(device_id)
-
-    if not device:
-        _LOGGER.error("Device %s not found", device_id)
-        return
-
-    # Find the config entry for this device
-    coordinator = None
-    for entry_id, coord in hass.data.get(DOMAIN, {}).items():
-        if coord._get_device_id() == device_id:
-            coordinator = coord
-            break
+    coordinator = _get_coordinator_for_device(hass, device_id)
 
     if not coordinator:
         _LOGGER.error("Coordinator not found for device %s", device_id)

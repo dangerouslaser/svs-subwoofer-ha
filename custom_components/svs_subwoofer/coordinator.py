@@ -73,8 +73,43 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._disconnect_lock = asyncio.Lock()
         self._idle_disconnect_task: asyncio.Task | None = None
 
-        # Initialize data with defaults
-        self.data: dict[str, Any] = {}
+        # Initialize data with sensible defaults
+        # This ensures entities have values even before first device response
+        self.data: dict[str, Any] = {
+            # Volume and phase
+            "VOLUME": -20,
+            "PHASE": 0,
+            # Low pass filter
+            "LOW_PASS_FILTER_ENABLE": 0,
+            "LOW_PASS_FILTER_FREQ": 80,
+            "LOW_PASS_FILTER_SLOPE": 12,
+            # PEQ1
+            "PEQ1_ENABLE": 0,
+            "PEQ1_FREQ": 50,
+            "PEQ1_BOOST": 0,
+            "PEQ1_QFACTOR": 1.0,
+            # PEQ2
+            "PEQ2_ENABLE": 0,
+            "PEQ2_FREQ": 50,
+            "PEQ2_BOOST": 0,
+            "PEQ2_QFACTOR": 1.0,
+            # PEQ3
+            "PEQ3_ENABLE": 0,
+            "PEQ3_FREQ": 50,
+            "PEQ3_BOOST": 0,
+            "PEQ3_QFACTOR": 1.0,
+            # Room gain
+            "ROOM_GAIN_ENABLE": 0,
+            "ROOM_GAIN_FREQ": 31,
+            "ROOM_GAIN_SLOPE": 6,
+            # Other
+            "STANDBY": 0,
+            "POLARITY": 0,
+            # Preset names (empty until loaded from device)
+            "PRESET1NAME": "",
+            "PRESET2NAME": "",
+            "PRESET3NAME": "",
+        }
         self._device_id: str | None = None
 
     def _get_device_id(self) -> str | None:
@@ -288,7 +323,9 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     _LOGGER.error("Failed to reconnect for command")
                     return False
 
-            if not self._client:
+            # Re-check connection state and client after potential connect
+            if not self._connected or not self._client:
+                _LOGGER.error("Not connected, cannot send command")
                 return False
 
             frame, meta = svs_encode("MEMWRITE", param, value)
@@ -297,6 +334,11 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 return False
 
             try:
+                # Final connection check before write
+                if not self._client.is_connected:
+                    _LOGGER.error("BLE client disconnected before write")
+                    self._connected = False
+                    return False
                 _LOGGER.debug("Sending command: %s", meta)
                 await self._client.write_gatt_char(SVS_CHAR_UUID, frame)
                 # Rate limiting per pySVS protocol
@@ -306,6 +348,10 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 return True
             except BleakError as err:
                 _LOGGER.error("Failed to send command: %s", err)
+                self._connected = False
+                return False
+            except Exception as err:
+                _LOGGER.error("Unexpected error sending command: %s", err)
                 self._connected = False
                 return False
 

@@ -71,5 +71,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: SVSConfigEntry) -> bool
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry."""
-    await async_unload_entry(hass, entry)
+    try:
+        await async_unload_entry(hass, entry)
+    except Exception as err:
+        _LOGGER.error("Failed to unload SVS Subwoofer entry: %s", err)
+        # Continue to try setup anyway to recover
     await async_setup_entry(hass, entry)
