@@ -7,6 +7,7 @@ from typing import Any
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -51,6 +52,7 @@ SELECT_DESCRIPTIONS: tuple[SVSSelectEntityDescription, ...] = (
         key="lpf_slope",
         translation_key="lpf_slope",
         svs_param="LOW_PASS_FILTER_SLOPE",
+        entity_category=EntityCategory.CONFIG,
         options=LPF_SLOPE_OPTIONS,
         value_map=LPF_SLOPE_MAP,
         icon="mdi:tune-vertical",
@@ -59,6 +61,7 @@ SELECT_DESCRIPTIONS: tuple[SVSSelectEntityDescription, ...] = (
         key="room_gain_frequency",
         translation_key="room_gain_frequency",
         svs_param="ROOM_GAIN_FREQ",
+        entity_category=EntityCategory.CONFIG,
         options=ROOM_GAIN_FREQ_OPTIONS,
         value_map=ROOM_GAIN_FREQ_MAP,
         icon="mdi:home-sound-in",
@@ -67,6 +70,7 @@ SELECT_DESCRIPTIONS: tuple[SVSSelectEntityDescription, ...] = (
         key="room_gain_slope",
         translation_key="room_gain_slope",
         svs_param="ROOM_GAIN_SLOPE",
+        entity_category=EntityCategory.CONFIG,
         options=ROOM_GAIN_SLOPE_OPTIONS,
         value_map=ROOM_GAIN_SLOPE_MAP,
         icon="mdi:home-sound-in",
@@ -75,6 +79,7 @@ SELECT_DESCRIPTIONS: tuple[SVSSelectEntityDescription, ...] = (
         key="standby_mode",
         translation_key="standby_mode",
         svs_param="STANDBY",
+        entity_category=EntityCategory.CONFIG,
         options=STANDBY_MODES,
         value_map=STANDBY_MODE_MAP,
         icon="mdi:power-standby",

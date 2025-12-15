@@ -7,6 +7,7 @@ from typing import Any
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -29,36 +30,42 @@ SWITCH_DESCRIPTIONS: tuple[SVSSwitchEntityDescription, ...] = (
         key="lpf_enable",
         translation_key="lpf_enable",
         svs_param="LOW_PASS_FILTER_ENABLE",
+        entity_category=EntityCategory.CONFIG,
         icon="mdi:tune-vertical",
     ),
     SVSSwitchEntityDescription(
         key="peq1_enable",
         translation_key="peq1_enable",
         svs_param="PEQ1_ENABLE",
+        entity_category=EntityCategory.CONFIG,
         icon="mdi:equalizer",
     ),
     SVSSwitchEntityDescription(
         key="peq2_enable",
         translation_key="peq2_enable",
         svs_param="PEQ2_ENABLE",
+        entity_category=EntityCategory.CONFIG,
         icon="mdi:equalizer",
     ),
     SVSSwitchEntityDescription(
         key="peq3_enable",
         translation_key="peq3_enable",
         svs_param="PEQ3_ENABLE",
+        entity_category=EntityCategory.CONFIG,
         icon="mdi:equalizer",
     ),
     SVSSwitchEntityDescription(
         key="room_gain_enable",
         translation_key="room_gain_enable",
         svs_param="ROOM_GAIN_ENABLE",
+        entity_category=EntityCategory.CONFIG,
         icon="mdi:home-sound-in",
     ),
     SVSSwitchEntityDescription(
         key="polarity",
         translation_key="polarity",
         svs_param="POLARITY",
+        entity_category=EntityCategory.CONFIG,
         icon="mdi:swap-horizontal",
     ),
 )

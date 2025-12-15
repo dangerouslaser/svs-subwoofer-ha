@@ -5,6 +5,7 @@ import logging
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -38,6 +39,7 @@ class SVSReconnectButton(CoordinatorEntity[SVSSubwooferCoordinator], ButtonEntit
     _attr_has_entity_name = True
     _attr_translation_key = "reconnect"
     _attr_icon = "mdi:bluetooth-connect"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, coordinator: SVSSubwooferCoordinator) -> None:
         """Initialize the button."""
@@ -62,6 +64,7 @@ class SVSSavePresetButton(CoordinatorEntity[SVSSubwooferCoordinator], ButtonEnti
 
     _attr_has_entity_name = True
     _attr_icon = "mdi:content-save"
+    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, coordinator: SVSSubwooferCoordinator, preset_number: int) -> None:
         """Initialize the button."""

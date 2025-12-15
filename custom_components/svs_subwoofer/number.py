@@ -11,6 +11,7 @@ from homeassistant.components.number import (
     NumberMode,
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -75,6 +76,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         key="lpf_frequency",
         translation_key="lpf_frequency",
         svs_param="LOW_PASS_FILTER_FREQ",
+        entity_category=EntityCategory.CONFIG,
         native_min_value=LPF_FREQ_MIN,
         native_max_value=LPF_FREQ_MAX,
         native_step=LPF_FREQ_STEP,
@@ -87,6 +89,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         key="peq1_frequency",
         translation_key="peq1_frequency",
         svs_param="PEQ1_FREQ",
+        entity_category=EntityCategory.CONFIG,
         native_min_value=PEQ_FREQ_MIN,
         native_max_value=PEQ_FREQ_MAX,
         native_step=PEQ_FREQ_STEP,
@@ -98,6 +101,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         key="peq1_boost",
         translation_key="peq1_boost",
         svs_param="PEQ1_BOOST",
+        entity_category=EntityCategory.CONFIG,
         native_min_value=PEQ_BOOST_MIN,
         native_max_value=PEQ_BOOST_MAX,
         native_step=PEQ_BOOST_STEP,
@@ -109,6 +113,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         key="peq1_q_factor",
         translation_key="peq1_q_factor",
         svs_param="PEQ1_QFACTOR",
+        entity_category=EntityCategory.CONFIG,
         native_min_value=PEQ_Q_MIN,
         native_max_value=PEQ_Q_MAX,
         native_step=PEQ_Q_STEP,
@@ -120,6 +125,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         key="peq2_frequency",
         translation_key="peq2_frequency",
         svs_param="PEQ2_FREQ",
+        entity_category=EntityCategory.CONFIG,
         native_min_value=PEQ_FREQ_MIN,
         native_max_value=PEQ_FREQ_MAX,
         native_step=PEQ_FREQ_STEP,
@@ -131,6 +137,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         key="peq2_boost",
         translation_key="peq2_boost",
         svs_param="PEQ2_BOOST",
+        entity_category=EntityCategory.CONFIG,
         native_min_value=PEQ_BOOST_MIN,
         native_max_value=PEQ_BOOST_MAX,
         native_step=PEQ_BOOST_STEP,
@@ -142,6 +149,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         key="peq2_q_factor",
         translation_key="peq2_q_factor",
         svs_param="PEQ2_QFACTOR",
+        entity_category=EntityCategory.CONFIG,
         native_min_value=PEQ_Q_MIN,
         native_max_value=PEQ_Q_MAX,
         native_step=PEQ_Q_STEP,
@@ -153,6 +161,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         key="peq3_frequency",
         translation_key="peq3_frequency",
         svs_param="PEQ3_FREQ",
+        entity_category=EntityCategory.CONFIG,
         native_min_value=PEQ_FREQ_MIN,
         native_max_value=PEQ_FREQ_MAX,
         native_step=PEQ_FREQ_STEP,
@@ -164,6 +173,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         key="peq3_boost",
         translation_key="peq3_boost",
         svs_param="PEQ3_BOOST",
+        entity_category=EntityCategory.CONFIG,
         native_min_value=PEQ_BOOST_MIN,
         native_max_value=PEQ_BOOST_MAX,
         native_step=PEQ_BOOST_STEP,
@@ -175,6 +185,7 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
         key="peq3_q_factor",
         translation_key="peq3_q_factor",
         svs_param="PEQ3_QFACTOR",
+        entity_category=EntityCategory.CONFIG,
         native_min_value=PEQ_Q_MIN,
         native_max_value=PEQ_Q_MAX,
         native_step=PEQ_Q_STEP,
