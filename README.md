@@ -1,23 +1,13 @@
-# SVS Subwoofer Control
-
-Control SVS subwoofers via Bluetooth using the same protocol as the official SVS app.
-
-This repository contains:
-1. **Home Assistant Integration** - HACS-compatible custom component
-2. **pySVS** - Standalone Python GUI/CLI application by [Logon84](https://github.com/logon84/pySVS)
-
----
-
-## Home Assistant Integration
+# SVS Subwoofer Integration for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 
-Control your SVS subwoofer directly from Home Assistant with full parameter access.
+Control your SVS subwoofer directly from Home Assistant via Bluetooth. Full parameter access using the same protocol as the official SVS app.
 
-### Features
+## Features
 
 - Bluetooth auto-discovery of SVS subwoofers
-- Manual MAC address configuration
+- Manual MAC address configuration option
 - Support for multiple subwoofers
 - Full parameter control:
   - Volume (-60 to 0 dB)
@@ -28,17 +18,19 @@ Control your SVS subwoofer directly from Home Assistant with full parameter acce
   - Polarity
   - Presets (1-4)
   - Standby Mode
+- Device triggers and actions for automations
 
-### Prerequisites
+## Prerequisites
 
-- **Home Assistant Bluetooth Integration** must be configured and working before adding SVS subwoofers
+- **Home Assistant 2024.4.0** or newer
+- **Home Assistant Bluetooth Integration** must be configured and working
   - Go to **Settings** → **Devices & Services** → **Bluetooth**
   - Ensure your Bluetooth adapter is detected and operational
   - See [Home Assistant Bluetooth documentation](https://www.home-assistant.io/integrations/bluetooth/) for setup help
 
-### Installation
+## Installation
 
-#### HACS (Recommended)
+### HACS (Recommended)
 
 1. Open HACS in Home Assistant
 2. Click the three dots menu and select "Custom repositories"
@@ -47,12 +39,12 @@ Control your SVS subwoofer directly from Home Assistant with full parameter acce
 5. Search for "SVS Subwoofer" and install
 6. Restart Home Assistant
 
-#### Manual Installation
+### Manual Installation
 
 1. Copy the `custom_components/svs_subwoofer` folder to your Home Assistant `config/custom_components/` directory
 2. Restart Home Assistant
 
-### Configuration
+## Configuration
 
 1. **Ensure Bluetooth is working** in Home Assistant (Settings → Devices & Services → Bluetooth)
 2. **Disconnect the SVS app** on your phone (the subwoofer only allows one BLE connection)
@@ -60,40 +52,34 @@ Control your SVS subwoofer directly from Home Assistant with full parameter acce
 4. Click **Add Integration**
 5. Search for "SVS Subwoofer"
 6. Either:
-   - Select your subwoofer by name from the list (e.g., "RIGHTSUB", "LEFTSUB" - the name you set in the SVS app)
+   - Select your subwoofer by name from the list (e.g., "RIGHTSUB", "LEFTSUB")
    - Devices marked with `[SVS]` are detected SVS subwoofers
    - Or choose "Enter MAC address manually" if your device isn't showing
 
 ### Finding Your Subwoofer
 
-The integration will show all discovered Bluetooth devices by name. Your subwoofers will appear with the names you configured in the SVS app (e.g., "RIGHTSUB", "LEFTSUB").
+The integration shows all discovered Bluetooth devices by name. Your subwoofers will appear with the names you configured in the SVS app.
 
 **Tips for discovery:**
-- Open the SVS app on your phone and connect to the subwoofer briefly - this helps activate Bluetooth advertising
+- Open the SVS app briefly to activate Bluetooth advertising, then disconnect
 - Make sure the subwoofer is powered on and within range
 - Disconnect the SVS app before adding to Home Assistant
 
-**Manual MAC address lookup (if needed):**
-
-If you need to find the MAC address manually, you can use `bluetoothctl` on a Linux system:
+**Manual MAC address lookup:**
 
 ```bash
 bluetoothctl
 [bluetooth]# scan on
-# Look for your subwoofer by name:
+# Look for your subwoofer - SVS devices have MACs starting with 08:EB:ED
 # [NEW] Device 08:EB:ED:63:7E:00 RIGHTSUB
-# [NEW] Device 08:EB:ED:69:3E:D0 LEFTSUB
 [bluetooth]# scan off
 [bluetooth]# exit
 ```
 
-SVS subwoofers have MAC addresses starting with `08:EB:ED`.
+## Entities
 
-### Entities
+### Numbers (Sliders)
 
-The integration creates the following entities for each subwoofer:
-
-#### Numbers (Sliders)
 | Entity | Description | Range |
 |--------|-------------|-------|
 | Volume | Main volume level | -60 to 0 dB |
@@ -103,7 +89,8 @@ The integration creates the following entities for each subwoofer:
 | PEQ1/2/3 Boost | Parametric EQ gain | -12 to +6 dB |
 | PEQ1/2/3 Q-Factor | Parametric EQ bandwidth | 0.2-10.0 |
 
-#### Selects (Dropdowns)
+### Selects (Dropdowns)
+
 | Entity | Description | Options |
 |--------|-------------|---------|
 | LPF Slope | Low pass filter slope | 6/12/18/24 dB |
@@ -112,7 +99,8 @@ The integration creates the following entities for each subwoofer:
 | Standby Mode | Power mode | Auto ON/Trigger/ON |
 | Preset | Load saved preset | 1/2/3/Default |
 
-#### Switches (Toggles)
+### Switches (Toggles)
+
 | Entity | Description |
 |--------|-------------|
 | Low Pass Filter | Enable/disable LPF |
@@ -120,10 +108,21 @@ The integration creates the following entities for each subwoofer:
 | Room Gain Compensation | Enable/disable room gain |
 | Polarity (Inverted) | Normal (+) or inverted (-) polarity |
 
-### Dashboard Examples
+### Buttons
 
-#### Quick Control Card
-A minimal card with just volume and preset - perfect for daily use:
+| Entity | Description |
+|--------|-------------|
+| Reconnect | Reconnect to the subwoofer |
+
+### Binary Sensors
+
+| Entity | Description |
+|--------|-------------|
+| Connected | Connection status |
+
+## Dashboard Examples
+
+### Quick Control Card
 
 ```yaml
 type: entities
@@ -135,12 +134,11 @@ entities:
     name: Preset
 ```
 
-#### Full Control Card
-A comprehensive card with all main controls:
+### Full Control Card
 
 ```yaml
 type: entities
-title: SVS Subwoofer - Full Control
+title: SVS Subwoofer
 entities:
   - type: section
     label: Status
@@ -173,13 +171,12 @@ entities:
 
 > **Note:** Replace `svs_subwoofer` with your actual device name (e.g., `rightsub`, `leftsub`).
 
-### Example Automations
+## Example Automations
 
-#### Movie Mode - Load preset when watching movies
+### Movie Mode - Load preset when watching movies
 
 ```yaml
 alias: Movie Mode - SVS Cinema Preset
-description: Load cinema preset when media player starts playing
 triggers:
   - trigger: state
     entity_id: media_player.living_room_tv
@@ -189,14 +186,13 @@ actions:
     target:
       entity_id: select.svs_subwoofer_preset
     data:
-      option: "Movie"  # Or use your custom preset name
+      option: "Preset 2"
 ```
 
-#### Night Mode - Reduce volume after 10 PM
+### Night Mode - Reduce volume after 10 PM
 
 ```yaml
 alias: Night Mode - Lower Subwoofer Volume
-description: Automatically reduce subwoofer volume at night
 triggers:
   - trigger: time
     at: "22:00:00"
@@ -212,52 +208,11 @@ actions:
       value: -30
 ```
 
-#### Restore Day Volume
+## Device Triggers & Actions
 
-```yaml
-alias: Day Mode - Restore Subwoofer Volume
-description: Restore normal subwoofer volume in the morning
-triggers:
-  - trigger: time
-    at: "08:00:00"
-actions:
-  - action: number.set_value
-    target:
-      entity_id: number.svs_subwoofer_volume
-    data:
-      value: -15
-```
+The integration supports device triggers and actions for automations.
 
-#### Music Mode - Different EQ for music
-
-```yaml
-alias: Music Mode - Enhanced Bass
-description: Enable PEQ boost when listening to music
-triggers:
-  - trigger: state
-    entity_id: media_player.spotify
-    to: playing
-actions:
-  - action: switch.turn_on
-    target:
-      entity_id: switch.svs_subwoofer_peq1
-  - action: number.set_value
-    target:
-      entity_id: number.svs_subwoofer_peq1_frequency
-    data:
-      value: 50
-  - action: number.set_value
-    target:
-      entity_id: number.svs_subwoofer_peq1_boost
-    data:
-      value: 3
-```
-
-### Device Triggers & Actions
-
-The integration supports device triggers and actions for more powerful automations.
-
-#### Available Triggers
+### Available Triggers
 
 | Trigger | Description |
 |---------|-------------|
@@ -265,7 +220,7 @@ The integration supports device triggers and actions for more powerful automatio
 | Subwoofer disconnected | Fires when the subwoofer disconnects |
 | Preset loaded | Fires when a preset is loaded (Preset 1, 2, 3, or Default) |
 
-#### Available Actions
+### Available Actions
 
 | Action | Description | Parameters |
 |--------|-------------|------------|
@@ -274,7 +229,7 @@ The integration supports device triggers and actions for more powerful automatio
 | Set volume | Set the volume level | `volume`: -60 to 0 |
 | Reconnect | Reconnect to the subwoofer | - |
 
-#### Device Trigger Example
+### Device Trigger Example
 
 ```yaml
 automation:
@@ -290,7 +245,7 @@ automation:
           message: "SVS Subwoofer has disconnected"
 ```
 
-#### Device Action Example
+### Device Action Example
 
 ```yaml
 automation:
@@ -306,65 +261,9 @@ automation:
         preset: 2
 ```
 
-> **Note:** Find your device_id in the automation UI when creating a new automation with device triggers/actions.
-
-### Troubleshooting
-
-**Device not discovered:**
-- Ensure Bluetooth is enabled on your Home Assistant host
-- Check that the subwoofer is powered on and in range
-- Try adding manually using the MAC address
-
-**Connection issues:**
-- The subwoofer can only connect to one device at a time
-- Disconnect from the SVS app on your phone if connected
-- Power cycle the subwoofer
-
----
-
-## pySVS Standalone Application
-
-Original Python GUI/CLI application by Logon84.
-
-![pySVS Screenshot](https://raw.githubusercontent.com/logon84/pySVS/main/pic.png)
-
-### Requirements
-
-```bash
-pip3 install bleak
-```
-
-### Usage
-
-```
-pySVS.py <-b device> <-m MAC_Address> <parameter1> <value1> ...
-
-Options:
-  -b dev, --btiface=dev    BT interface (default: hci0)
-  -m MAC, --mac=MAC        Device MAC address
-  -h, --help               Show help
-  -v, --version            Show version
-  -e, --encode             Print built frames
-  -d FRAME, --decode=FRAME Decode frame values
-  -i, --info               Show subwoofer info
-
-Parameters:
-  -l X@Y@Z, --lpf=X@Y@Z       Low Pass Filter [enable@freq@slope]
-  -q V@W@X@Y@Z, --peq=...     PEQ [band@enable@freq@boost@Q]
-  -r X@Y@Z, --roomgain=...    Room Gain [enable@freq@slope]
-  -o X, --volume=X            Volume level
-  -f X, --phase=X             Phase level
-  -k X, --polarity=X          Polarity [0(+) or 1(-)]
-  -p X, --preset=X            Load preset [1-4]
-```
-
-Run without arguments to launch the GUI.
-
----
-
 ## Supported Devices
 
-This integration works with any SVS subwoofer that supports the official SVS app, including:
+Works with any SVS subwoofer that supports the official SVS app:
 
 **SB Series (Sealed Box)**
 - SB-1000 Pro
@@ -382,17 +281,27 @@ This integration works with any SVS subwoofer that supports the official SVS app
 - Micro 3000
 - 3000 In-Wall
 
-If your SVS subwoofer connects to the SVS app on your phone, it should work with this integration.
+## Troubleshooting
+
+**Device not discovered:**
+- Ensure Bluetooth is enabled on your Home Assistant host
+- Check that the subwoofer is powered on and in range
+- Try adding manually using the MAC address
+
+**Connection issues:**
+- The subwoofer can only connect to one device at a time
+- Disconnect from the SVS app on your phone if connected
+- Power cycle the subwoofer
+
+**Commands not working:**
+- Check the Home Assistant logs for errors
+- Try using the Reconnect button
+- Ensure you're not connected via the SVS app
 
 ## Credits
 
-- Original pySVS by [Logon84](https://github.com/logon84/pySVS)
-- Home Assistant integration port
+Protocol reverse-engineering based on [pySVS by Logon84](https://github.com/logon84/pySVS).
 
 ## License
 
 See [LICENSE](LICENSE) file.
-
-## Disclaimer
-
-This software is provided as-is. Use at your own risk.
