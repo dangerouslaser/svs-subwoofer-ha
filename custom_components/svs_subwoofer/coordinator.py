@@ -8,6 +8,7 @@ from typing import Any
 
 from bleak import BleakClient
 from bleak.exc import BleakError
+from bleak_retry_connector import establish_connection, BleakNotFoundError
 from homeassistant.components.bluetooth import async_ble_device_from_address
 from homeassistant.const import CONF_DEVICE_ID, CONF_TYPE
 from homeassistant.core import HomeAssistant, callback
@@ -199,88 +200,48 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._connected and self._client and self._client.is_connected:
             return
 
-        last_error: Exception | None = None
-
-        for attempt in range(MAX_CONNECT_RETRIES):
-            # Get fresh BLE device reference each attempt
-            ble_device = async_ble_device_from_address(
-                self.hass, self.address, connectable=True
-            )
-            if not ble_device:
-                _LOGGER.warning(
-                    "Device %s not found (attempt %d/%d). "
-                    "Ensure subwoofer is powered on and not connected to another device.",
-                    self.address,
-                    attempt + 1,
-                    MAX_CONNECT_RETRIES,
-                )
-                if attempt < MAX_CONNECT_RETRIES - 1:
-                    await asyncio.sleep(RETRY_DELAY)
-                    continue
-                raise UpdateFailed(
-                    f"Device {self.address} not found. "
-                    "Check that the subwoofer is powered on and the SVS app is disconnected."
-                )
-
-            _LOGGER.debug(
-                "Connecting to SVS Subwoofer at %s (attempt %d/%d)",
-                self.address,
-                attempt + 1,
-                MAX_CONNECT_RETRIES,
-            )
-
-            try:
-                # Create fresh client for each attempt
-                self._client = BleakClient(
-                    ble_device,
-                    disconnected_callback=self._on_disconnect,
-                )
-                await asyncio.wait_for(
-                    self._client.connect(), timeout=CONNECTION_TIMEOUT
-                )
-                await self._client.start_notify(
-                    SVS_CHAR_UUID, self._notification_handler
-                )
-                self._connected = True
-                _LOGGER.info("Connected to SVS Subwoofer at %s", self.address)
-                # Notify listeners of connection state change
-                self.async_set_updated_data(self.data)
-                # Fire connected event for device automations
-                self._fire_event(TRIGGER_TYPE_CONNECTED)
-                return
-            except TimeoutError as err:
-                last_error = err
-                _LOGGER.warning(
-                    "Timeout connecting to %s (attempt %d/%d)",
-                    self.address,
-                    attempt + 1,
-                    MAX_CONNECT_RETRIES,
-                )
-            except BleakError as err:
-                last_error = err
-                _LOGGER.warning(
-                    "BLE error connecting to %s: %s (attempt %d/%d)",
-                    self.address,
-                    err,
-                    attempt + 1,
-                    MAX_CONNECT_RETRIES,
-                )
-
-            # Clean up failed client
-            if self._client:
-                try:
-                    await self._client.disconnect()
-                except Exception:
-                    pass
-                self._client = None
-
-            if attempt < MAX_CONNECT_RETRIES - 1:
-                await asyncio.sleep(RETRY_DELAY)
-
-        # All retries failed
-        raise UpdateFailed(
-            f"Failed to connect to {self.address} after {MAX_CONNECT_RETRIES} attempts: {last_error}"
+        # Get BLE device reference
+        ble_device = async_ble_device_from_address(
+            self.hass, self.address, connectable=True
         )
+        if not ble_device:
+            raise UpdateFailed(
+                f"Device {self.address} not found. "
+                "Check that the subwoofer is powered on and the SVS app is disconnected."
+            )
+
+        _LOGGER.debug("Connecting to SVS Subwoofer at %s", self.address)
+
+        try:
+            # Use bleak_retry_connector for reliable HA Bluetooth integration
+            self._client = await establish_connection(
+                BleakClient,
+                ble_device,
+                self.address,
+                disconnected_callback=self._on_disconnect,
+                max_attempts=MAX_CONNECT_RETRIES,
+            )
+            await self._client.start_notify(
+                SVS_CHAR_UUID, self._notification_handler
+            )
+            self._connected = True
+            _LOGGER.info("Connected to SVS Subwoofer at %s", self.address)
+            # Notify listeners of connection state change
+            self.async_set_updated_data(self.data)
+            # Fire connected event for device automations
+            self._fire_event(TRIGGER_TYPE_CONNECTED)
+        except BleakNotFoundError as err:
+            raise UpdateFailed(
+                f"Device {self.address} not found: {err}"
+            ) from err
+        except TimeoutError as err:
+            raise UpdateFailed(
+                f"Timeout connecting to {self.address}: {err}"
+            ) from err
+        except BleakError as err:
+            raise UpdateFailed(
+                f"Failed to connect to {self.address}: {err}"
+            ) from err
 
     def _on_disconnect(self, client: BleakClient) -> None:
         """Handle disconnection from device."""
