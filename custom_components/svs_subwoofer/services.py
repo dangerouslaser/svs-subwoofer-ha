@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
 
 import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv, device_registry as dr
+from homeassistant.helpers import config_validation as cv
 
 from .const import (
     DOMAIN,
@@ -18,9 +17,7 @@ from .const import (
     VOLUME_MAX,
     VOLUME_MIN,
 )
-
-if TYPE_CHECKING:
-    from .coordinator import SVSSubwooferCoordinator
+from .helpers import get_coordinator_for_device
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -61,47 +58,12 @@ SERVICE_LOAD_PRESET_SCHEMA = vol.Schema(
 )
 
 
-def _get_coordinator_for_device(
-    hass: HomeAssistant, device_id: str
-) -> SVSSubwooferCoordinator | None:
-    """Get the coordinator for a device by its device ID.
-
-    Uses device registry to find the MAC address identifier,
-    then matches against coordinators.
-    """
-    device_registry = dr.async_get(hass)
-    device = device_registry.async_get(device_id)
-
-    if not device:
-        _LOGGER.warning("Device not found: %s", device_id)
-        return None
-
-    # Find the MAC address from device identifiers
-    device_address = None
-    for identifier in device.identifiers:
-        if identifier[0] == DOMAIN:
-            device_address = identifier[1]
-            break
-
-    if not device_address:
-        _LOGGER.warning("No SVS identifier found for device: %s", device_id)
-        return None
-
-    # Find coordinator by MAC address match
-    for coord in hass.data.get(DOMAIN, {}).values():
-        if hasattr(coord, "address") and coord.address == device_address:
-            return coord
-
-    _LOGGER.warning("No coordinator found for device: %s", device_id)
-    return None
-
-
 async def async_sync_from(hass: HomeAssistant, call: ServiceCall) -> None:
     """Copy all settings from source subwoofer to target subwoofer(s)."""
     source_device_id = call.data[ATTR_SOURCE_DEVICE_ID]
     target_device_ids = call.data[ATTR_TARGET_DEVICE_IDS]
 
-    source_coord = _get_coordinator_for_device(hass, source_device_id)
+    source_coord = get_coordinator_for_device(hass, source_device_id)
     if not source_coord:
         _LOGGER.error("Source device not found: %s", source_device_id)
         return
@@ -113,7 +75,7 @@ async def async_sync_from(hass: HomeAssistant, call: ServiceCall) -> None:
     )
 
     for target_id in target_device_ids:
-        target_coord = _get_coordinator_for_device(hass, target_id)
+        target_coord = get_coordinator_for_device(hass, target_id)
         if not target_coord:
             _LOGGER.warning("Target device not found, skipping: %s", target_id)
             continue
@@ -150,7 +112,7 @@ async def async_set_volume(hass: HomeAssistant, call: ServiceCall) -> None:
     )
 
     for device_id in device_ids:
-        coord = _get_coordinator_for_device(hass, device_id)
+        coord = get_coordinator_for_device(hass, device_id)
         if not coord:
             _LOGGER.warning("Device not found, skipping: %s", device_id)
             continue
@@ -193,7 +155,7 @@ async def async_load_preset(hass: HomeAssistant, call: ServiceCall) -> None:
     _LOGGER.info("Loading preset %s on %d device(s)", preset_num, len(device_ids))
 
     for device_id in device_ids:
-        coord = _get_coordinator_for_device(hass, device_id)
+        coord = get_coordinator_for_device(hass, device_id)
         if not coord:
             _LOGGER.warning("Device not found, skipping: %s", device_id)
             continue

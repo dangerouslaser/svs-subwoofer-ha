@@ -6,14 +6,14 @@ import logging
 from dataclasses import dataclass
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from . import SVSConfigEntry
 from .const import (
-    DOMAIN,
     LPF_SLOPES,
     PRESET_MAP,
     PRESETS,
@@ -98,11 +98,11 @@ SELECT_DESCRIPTIONS: tuple[SVSSelectEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: SVSConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up SVS select entities."""
-    coordinator: SVSSubwooferCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     async_add_entities(
         SVSSelectEntity(coordinator, description) for description in SELECT_DESCRIPTIONS
@@ -167,8 +167,15 @@ class SVSSelectEntity(CoordinatorEntity[SVSSubwooferCoordinator], SelectEntity):
     @property
     def current_option(self) -> str | None:
         """Return current option."""
-        # For presets, we don't track current state from device
         if self.entity_description.is_preset:
+            active = self.coordinator.data.get("ACTIVE_PRESET")
+            if active is None:
+                return None
+            # Map preset number to current option name (0-indexed into options list)
+            current_options = self.options
+            idx = active - 1 if active <= 3 else 3  # preset 4 = Default = index 3
+            if 0 <= idx < len(current_options):
+                return current_options[idx]
             return None
 
         value = self.coordinator.data.get(self.entity_description.svs_param)
@@ -192,18 +199,16 @@ class SVSSelectEntity(CoordinatorEntity[SVSSubwooferCoordinator], SelectEntity):
             return
 
         if self.entity_description.is_preset:
-            # Handle preset loading specially
             success = await self.coordinator.async_load_preset(value)
         else:
             success = await self.coordinator.async_send_command(
                 self.entity_description.svs_param, value
             )
 
-        if success and not self.entity_description.is_preset:
+        if not success:
+            raise HomeAssistantError(
+                f"Failed to set {self.entity_description.key} to {option}"
+            )
+        if not self.entity_description.is_preset:
             self.coordinator.data[self.entity_description.svs_param] = value
-            self.async_write_ha_state()
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self.async_write_ha_state()
+        self.coordinator.async_set_updated_data(self.coordinator.data)

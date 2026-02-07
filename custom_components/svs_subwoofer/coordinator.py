@@ -7,8 +7,9 @@ import logging
 from typing import Any
 
 from bleak import BleakClient
+from bleak.backends.characteristic import BleakGATTCharacteristic
 from bleak.exc import BleakError
-from bleak_retry_connector import establish_connection, BleakNotFoundError
+from bleak_retry_connector import BleakNotFoundError, establish_connection
 from homeassistant.components.bluetooth import async_ble_device_from_address
 from homeassistant.const import CONF_DEVICE_ID, CONF_TYPE
 from homeassistant.core import HomeAssistant, callback
@@ -108,6 +109,8 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "PRESET1NAME": "",
             "PRESET2NAME": "",
             "PRESET3NAME": "",
+            # Active preset (None until a preset is loaded)
+            "ACTIVE_PRESET": None,
         }
         self._device_id: str | None = None
 
@@ -221,9 +224,7 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 disconnected_callback=self._on_disconnect,
                 max_attempts=MAX_CONNECT_RETRIES,
             )
-            await self._client.start_notify(
-                SVS_CHAR_UUID, self._notification_handler
-            )
+            await self._client.start_notify(SVS_CHAR_UUID, self._notification_handler)
             self._connected = True
             _LOGGER.info("Connected to SVS Subwoofer at %s", self.address)
             # Notify listeners of connection state change
@@ -231,17 +232,11 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # Fire connected event for device automations
             self._fire_event(TRIGGER_TYPE_CONNECTED)
         except BleakNotFoundError as err:
-            raise UpdateFailed(
-                f"Device {self.address} not found: {err}"
-            ) from err
+            raise UpdateFailed(f"Device {self.address} not found: {err}") from err
         except TimeoutError as err:
-            raise UpdateFailed(
-                f"Timeout connecting to {self.address}: {err}"
-            ) from err
+            raise UpdateFailed(f"Timeout connecting to {self.address}: {err}") from err
         except BleakError as err:
-            raise UpdateFailed(
-                f"Failed to connect to {self.address}: {err}"
-            ) from err
+            raise UpdateFailed(f"Failed to connect to {self.address}: {err}") from err
 
     def _on_disconnect(self, client: BleakClient) -> None:
         """Handle disconnection from device."""
@@ -254,13 +249,10 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._fire_event(TRIGGER_TYPE_DISCONNECTED)
 
     @callback
-    def _notification_handler(self, sender: int, data: bytearray) -> None:
-        """Handle incoming BLE notifications.
-
-        Args:
-            sender: Characteristic handle.
-            data: Notification data.
-        """
+    def _notification_handler(
+        self, sender: BleakGATTCharacteristic, data: bytearray
+    ) -> None:
+        """Handle incoming BLE notifications."""
         decoded = self._frame_assembler.add_data(bytes(data))
 
         if decoded and decoded.get("FRAME_RECOGNIZED"):
@@ -354,6 +346,8 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await self._client.write_gatt_char(SVS_CHAR_UUID, frame)
                 await asyncio.sleep(COMMAND_DELAY)
 
+                # Track which preset is active
+                self.data["ACTIVE_PRESET"] = preset_number
                 # After loading preset, request current settings
                 await self._request_full_settings()
                 # Reset idle disconnect timer

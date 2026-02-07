@@ -7,13 +7,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from . import SVSConfigEntry
 from .coordinator import SVSSubwooferCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -74,11 +74,11 @@ SWITCH_DESCRIPTIONS: tuple[SVSSwitchEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: SVSConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up SVS switch entities."""
-    coordinator: SVSSubwooferCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     async_add_entities(
         SVSSwitchEntity(coordinator, description) for description in SWITCH_DESCRIPTIONS
@@ -116,9 +116,10 @@ class SVSSwitchEntity(CoordinatorEntity[SVSSubwooferCoordinator], SwitchEntity):
         success = await self.coordinator.async_send_command(
             self.entity_description.svs_param, 1
         )
-        if success:
-            self.coordinator.data[self.entity_description.svs_param] = 1
-            self.async_write_ha_state()
+        if not success:
+            raise HomeAssistantError(f"Failed to turn on {self.entity_description.key}")
+        self.coordinator.data[self.entity_description.svs_param] = 1
+        self.coordinator.async_set_updated_data(self.coordinator.data)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
@@ -126,11 +127,9 @@ class SVSSwitchEntity(CoordinatorEntity[SVSSubwooferCoordinator], SwitchEntity):
         success = await self.coordinator.async_send_command(
             self.entity_description.svs_param, 0
         )
-        if success:
-            self.coordinator.data[self.entity_description.svs_param] = 0
-            self.async_write_ha_state()
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self.async_write_ha_state()
+        if not success:
+            raise HomeAssistantError(
+                f"Failed to turn off {self.entity_description.key}"
+            )
+        self.coordinator.data[self.entity_description.svs_param] = 0
+        self.coordinator.async_set_updated_data(self.coordinator.data)

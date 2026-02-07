@@ -10,14 +10,14 @@ from homeassistant.components.number import (
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from . import SVSConfigEntry
 from .const import (
-    DOMAIN,
     LPF_FREQ_MAX,
     LPF_FREQ_MIN,
     LPF_FREQ_STEP,
@@ -197,11 +197,11 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: SVSConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up SVS number entities."""
-    coordinator: SVSSubwooferCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     async_add_entities(
         SVSNumberEntity(coordinator, description) for description in NUMBER_DESCRIPTIONS
@@ -244,11 +244,9 @@ class SVSNumberEntity(CoordinatorEntity[SVSSubwooferCoordinator], NumberEntity):
         success = await self.coordinator.async_send_command(
             self.entity_description.svs_param, value
         )
-        if success:
-            self.coordinator.data[self.entity_description.svs_param] = value
-            self.async_write_ha_state()
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self.async_write_ha_state()
+        if not success:
+            raise HomeAssistantError(
+                f"Failed to set {self.entity_description.key} to {value}"
+            )
+        self.coordinator.data[self.entity_description.svs_param] = value
+        self.coordinator.async_set_updated_data(self.coordinator.data)

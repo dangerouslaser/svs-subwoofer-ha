@@ -9,7 +9,6 @@ from __future__ import annotations
 import logging
 from binascii import crc_hqx, hexlify
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any
 
 _LOGGER = logging.getLogger(__name__)
@@ -17,24 +16,11 @@ _LOGGER = logging.getLogger(__name__)
 # Frame constants
 FRAME_PREAMBLE = b"\xaa"
 
+# Threshold for detecting negative values in the SVS protocol encoding.
+# Values >= this threshold are treated as negative (two's complement style with XOR mask).
+NEGATIVE_VALUE_THRESHOLD = 0xF000
 
-class FrameType(Enum):
-    """SVS frame types."""
-
-    PRESETLOADSAVE = b"\x07\x04"
-    MEMWRITE = b"\xf0\x1f"
-    MEMREAD = b"\xf1\x1f"
-    READ_RESP = b"\xf2\x00"
-    RESET = b"\xf3\x1f"
-    SUB_INFO1 = b"\xf4\x1f"
-    SUB_INFO1_RESP = b"\xf5\x00"
-    SUB_INFO2 = b"\xfc\x1f"
-    SUB_INFO2_RESP = b"\xfd\x00"
-    SUB_INFO3 = b"\xfe\x1f"
-    SUB_INFO3_RESP = b"\xff\x00"
-
-
-# Frame type lookup for decoding
+# Frame type lookup for encoding/decoding
 SVS_FRAME_TYPES: dict[str, bytes] = {
     "PRESETLOADSAVE": b"\x07\x04",
     "MEMWRITE": b"\xf0\x1f",
@@ -56,7 +42,7 @@ class SVSParameter:
 
     id: int
     offset: int
-    limits: list
+    limits: list[Any]
     limits_type: int | str  # 0=continuous, 1=discrete, 2=string, "group"
     n_bytes: int
     reset_id: int
@@ -388,7 +374,7 @@ def svs_decode(frame: bytes) -> dict[str, Any]:
                     else:
                         # Numeric value
                         raw_int = int.from_bytes(raw_bytes, "little")
-                        mask = 0 if raw_int < 0xF000 else 0xFFFF
+                        mask = 0 if raw_int < NEGATIVE_VALUE_THRESHOLD else 0xFFFF
                         value = (
                             ((-1) ** (mask % 2)) * ((raw_int - (mask % 2)) ^ mask) / 10
                         )
