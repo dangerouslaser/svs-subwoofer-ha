@@ -43,7 +43,7 @@ SERVICE_SET_VOLUME_SCHEMA = vol.Schema(
         vol.Required(ATTR_VOLUME): vol.All(
             vol.Coerce(int), vol.Range(min=VOLUME_MIN, max=VOLUME_MAX)
         ),
-        vol.Optional(ATTR_OFFSETS, default={}): dict,
+        vol.Optional(ATTR_OFFSETS, default={}): {cv.string: vol.Coerce(int)},
     }
 )
 

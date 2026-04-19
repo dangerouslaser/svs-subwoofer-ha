@@ -22,6 +22,7 @@ from .const import (
     DOMAIN,
     EVENT_SVS_SUBWOOFER,
     SVS_CHAR_UUID,
+    SYNCABLE_PARAMS,
     TRIGGER_SUBTYPE_DEFAULT,
     TRIGGER_TYPE_CONNECTED,
     TRIGGER_TYPE_DISCONNECTED,
@@ -264,6 +265,26 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # Notify listeners of new data
                 self.async_set_updated_data(self.data)
 
+    async def _ensure_writable(self) -> bool:
+        """Ensure BLE client is connected and ready for a write.
+
+        Caller must hold _command_lock. Reconnects if needed and verifies the
+        underlying client is still connected immediately before returning.
+        """
+        if not self._connected:
+            try:
+                await self._connect()
+            except UpdateFailed:
+                _LOGGER.error("Failed to reconnect for command")
+                return False
+
+        if not self._connected or not self._client or not self._client.is_connected:
+            _LOGGER.error("Not connected, cannot send command")
+            self._connected = False
+            return False
+
+        return True
+
     async def async_send_command(self, param: str, value: Any) -> bool:
         """Send a command to the subwoofer.
 
@@ -275,16 +296,7 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             True if command was sent successfully.
         """
         async with self._command_lock:
-            if not self._connected:
-                try:
-                    await self._connect()
-                except UpdateFailed:
-                    _LOGGER.error("Failed to reconnect for command")
-                    return False
-
-            # Re-check connection state and client after potential connect
-            if not self._connected or not self._client:
-                _LOGGER.error("Not connected, cannot send command")
+            if not await self._ensure_writable():
                 return False
 
             frame, meta = svs_encode("MEMWRITE", param, value)
@@ -293,15 +305,16 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 return False
 
             try:
-                # Final connection check before write
-                if not self._client.is_connected:
-                    _LOGGER.error("BLE client disconnected before write")
-                    self._connected = False
-                    return False
                 _LOGGER.debug("Sending command: %s", meta)
                 await self._client.write_gatt_char(SVS_CHAR_UUID, frame)
                 # Rate limiting per pySVS protocol
                 await asyncio.sleep(COMMAND_DELAY)
+                # User modified a param — any active preset is no longer truly active
+                if (
+                    param in SYNCABLE_PARAMS
+                    and self.data.get("ACTIVE_PRESET") is not None
+                ):
+                    self.data["ACTIVE_PRESET"] = None
                 # Reset idle disconnect timer
                 self._schedule_idle_disconnect()
                 return True
@@ -328,13 +341,7 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return False
 
         async with self._command_lock:
-            if not self._connected:
-                try:
-                    await self._connect()
-                except UpdateFailed:
-                    return False
-
-            if not self._client:
+            if not await self._ensure_writable():
                 return False
 
             frame, meta = svs_encode("PRESETLOADSAVE", f"PRESET{preset_number}LOAD")
@@ -381,13 +388,7 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return False
 
         async with self._command_lock:
-            if not self._connected:
-                try:
-                    await self._connect()
-                except UpdateFailed:
-                    return False
-
-            if not self._client:
+            if not await self._ensure_writable():
                 return False
 
             frame, meta = svs_encode("PRESETLOADSAVE", f"PRESET{preset_number}SAVE")

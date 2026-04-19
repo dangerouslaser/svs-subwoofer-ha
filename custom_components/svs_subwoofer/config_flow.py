@@ -125,7 +125,10 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 # Validate manual MAC address format
                 address = address.upper().replace("-", ":")
-                if len(address.replace(":", "").replace("-", "")) != 12:
+                mac_clean = address.replace(":", "")
+                if len(mac_clean) != 12 or not all(
+                    c in "0123456789ABCDEF" for c in mac_clean
+                ):
                     errors[CONF_ADDRESS] = "invalid_mac"
                 else:
                     formatted_mac = format_mac(address)

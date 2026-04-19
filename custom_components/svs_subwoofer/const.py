@@ -6,9 +6,6 @@ from typing import Final
 
 DOMAIN: Final = "svs_subwoofer"
 
-# Configuration keys
-CONF_MAC_ADDRESS: Final = "mac_address"
-
 # BLE Constants
 SVS_SERVICE_UUID: Final = "1fee6acf-a826-4e37-9635-4d8a01642c5d"
 SVS_CHAR_UUID: Final = "6409d79d-cd28-479c-a639-92f9e1948b43"
@@ -73,12 +70,12 @@ TRIGGER_SUBTYPE_PRESET_1: Final = "preset_1"
 TRIGGER_SUBTYPE_PRESET_2: Final = "preset_2"
 TRIGGER_SUBTYPE_PRESET_3: Final = "preset_3"
 TRIGGER_SUBTYPE_DEFAULT: Final = "default"
-TRIGGER_SUBTYPES_PRESET: Final = {
+TRIGGER_SUBTYPES_PRESET: Final = (
     TRIGGER_SUBTYPE_PRESET_1,
     TRIGGER_SUBTYPE_PRESET_2,
     TRIGGER_SUBTYPE_PRESET_3,
     TRIGGER_SUBTYPE_DEFAULT,
-}
+)
 
 # Device automation - Action types
 ACTION_TYPE_LOAD_PRESET: Final = "load_preset"

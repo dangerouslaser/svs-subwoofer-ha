@@ -440,6 +440,9 @@ class FrameAssembler:
         Returns:
             Decoded frame dictionary if complete, None otherwise.
         """
+        if not data:
+            return None
+
         # Check if this is a new frame start
         if data[0] == int.from_bytes(FRAME_PREAMBLE, "little"):
             if not self._sync:
@@ -447,10 +450,10 @@ class FrameAssembler:
                     "Frame fragment out of sync: %s",
                     bytes_to_hex_str(self._partial_frame),
                 )
-            self._partial_frame = data
+            self._partial_frame = bytes(data)
         else:
             # Continuation of existing frame
-            self._partial_frame = self._partial_frame + data
+            self._partial_frame = self._partial_frame + bytes(data)
 
         # Try to decode
         decoded = svs_decode(self._partial_frame)
@@ -462,6 +465,8 @@ class FrameAssembler:
                 decoded.get("FRAME_TYPE", "UNKNOWN"),
                 decoded.get("ATTRIBUTES", []),
             )
+            # Clear so a stray continuation doesn't concatenate onto a decoded frame
+            self._partial_frame = b""
             return decoded
 
         return None
