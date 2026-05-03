@@ -118,8 +118,6 @@ class SVSSwitchEntity(CoordinatorEntity[SVSSubwooferCoordinator], SwitchEntity):
         )
         if not success:
             raise HomeAssistantError(f"Failed to turn on {self.entity_description.key}")
-        self.coordinator.data[self.entity_description.svs_param] = 1
-        self.coordinator.async_set_updated_data(self.coordinator.data)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
@@ -131,5 +129,3 @@ class SVSSwitchEntity(CoordinatorEntity[SVSSubwooferCoordinator], SwitchEntity):
             raise HomeAssistantError(
                 f"Failed to turn off {self.entity_description.key}"
             )
-        self.coordinator.data[self.entity_description.svs_param] = 0
-        self.coordinator.async_set_updated_data(self.coordinator.data)

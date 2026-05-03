@@ -309,12 +309,17 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await self._client.write_gatt_char(SVS_CHAR_UUID, frame)
                 # Rate limiting per pySVS protocol
                 await asyncio.sleep(COMMAND_DELAY)
+                # Optimistic update — the SVS device does not reliably push a
+                # notification after a write, so reflect the new value locally
+                # so all paths (entities, services, sync_from) stay consistent.
+                self.data[param] = value
                 # User modified a param — any active preset is no longer truly active
                 if (
                     param in SYNCABLE_PARAMS
                     and self.data.get("ACTIVE_PRESET") is not None
                 ):
                     self.data["ACTIVE_PRESET"] = None
+                self.async_set_updated_data(self.data)
                 # Reset idle disconnect timer
                 self._schedule_idle_disconnect()
                 return True
@@ -353,8 +358,10 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await self._client.write_gatt_char(SVS_CHAR_UUID, frame)
                 await asyncio.sleep(COMMAND_DELAY)
 
-                # Track which preset is active
+                # Track which preset is active and publish immediately;
+                # _request_full_settings will follow with the actual values.
                 self.data["ACTIVE_PRESET"] = preset_number
+                self.async_set_updated_data(self.data)
                 # After loading preset, request current settings
                 await self._request_full_settings()
                 # Reset idle disconnect timer

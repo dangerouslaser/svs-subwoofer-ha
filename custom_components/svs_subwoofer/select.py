@@ -209,6 +209,3 @@ class SVSSelectEntity(CoordinatorEntity[SVSSubwooferCoordinator], SelectEntity):
             raise HomeAssistantError(
                 f"Failed to set {self.entity_description.key} to {option}"
             )
-        if not self.entity_description.is_preset:
-            self.coordinator.data[self.entity_description.svs_param] = value
-        self.coordinator.async_set_updated_data(self.coordinator.data)
