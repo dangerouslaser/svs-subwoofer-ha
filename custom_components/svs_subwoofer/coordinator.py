@@ -97,42 +97,9 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_rx = 0.0
         self._rx_event = asyncio.Event()
 
-        # Initialize data with sensible defaults
-        # This ensures entities have values even before first device response
+        # Settings are only present once the subwoofer has reported them, so
+        # entities show unknown instead of made-up values until the first read
         self.data: dict[str, Any] = {
-            # Volume and phase
-            "VOLUME": -20,
-            "PHASE": 0,
-            # Low pass filter
-            "LOW_PASS_FILTER_ENABLE": 0,
-            "LOW_PASS_FILTER_FREQ": 80,
-            "LOW_PASS_FILTER_SLOPE": 12,
-            # PEQ1
-            "PEQ1_ENABLE": 0,
-            "PEQ1_FREQ": 50,
-            "PEQ1_BOOST": 0,
-            "PEQ1_QFACTOR": 1.0,
-            # PEQ2
-            "PEQ2_ENABLE": 0,
-            "PEQ2_FREQ": 50,
-            "PEQ2_BOOST": 0,
-            "PEQ2_QFACTOR": 1.0,
-            # PEQ3
-            "PEQ3_ENABLE": 0,
-            "PEQ3_FREQ": 50,
-            "PEQ3_BOOST": 0,
-            "PEQ3_QFACTOR": 1.0,
-            # Room gain
-            "ROOM_GAIN_ENABLE": 0,
-            "ROOM_GAIN_FREQ": 31,
-            "ROOM_GAIN_SLOPE": 6,
-            # Other
-            "STANDBY": 0,
-            "POLARITY": 0,
-            # Preset names (empty until loaded from device)
-            "PRESET1NAME": "",
-            "PRESET2NAME": "",
-            "PRESET3NAME": "",
             # Active preset (None until a preset is loaded)
             "ACTIVE_PRESET": None,
         }
