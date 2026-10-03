@@ -344,14 +344,12 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Handle incoming BLE notifications."""
         self._last_rx = time.monotonic()
         self._rx_event.set()
-        decoded = self._frame_assembler.add_data(bytes(data))
-
-        if decoded and decoded.get("FRAME_RECOGNIZED"):
+        for decoded in self._frame_assembler.add_data(bytes(data)):
             validated = decoded.get("VALIDATED_VALUES", {})
             if validated:
                 # Update our data store
                 self.data.update(validated)
-                _LOGGER.debug("Updated data: %s", validated)
+                _LOGGER.debug("Updated data from %s: %s", self.address, validated)
                 # Notify listeners of new data
                 self.async_set_updated_data(self.data)
 
