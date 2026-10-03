@@ -60,7 +60,7 @@ Control your SVS subwoofer directly from Home Assistant via Bluetooth. Full para
 
 By default the integration connects when needed, re-reads all settings from the subwoofer on every connect, and disconnects after 60 seconds without commands so the SVS app can connect.
 
-If commands stop working after the subwoofer has been idle, open the integration's **Configure** dialog and enable **Stay connected**. The integration then keeps the connection open, checks it every 30 seconds, and reconnects if the subwoofer stops responding. Press the **Disconnect** button when you want to use the SVS app; the integration stays disconnected until the next command or Reconnect.
+If commands stop working after the subwoofer has been idle, open the integration's **Configure** dialog and enable **Stay connected**. The integration then keeps the connection open, checks it every 30 seconds, and reconnects if the subwoofer stops responding. If the subwoofer still does not respond after that, automatic reconnects back off to 30 seconds, then 1, 2, and 5 minutes apart, so a stuck subwoofer is not flooded with connections (which can also disturb other devices on the same Bluetooth proxy). A command or the Reconnect button always tries immediately. Press the **Disconnect** button when you want to use the SVS app; the integration stays disconnected until the next command or Reconnect.
 
 ### Finding Your Subwoofer
 
@@ -126,7 +126,7 @@ bluetoothctl
 
 | Entity | Description |
 |--------|-------------|
-| Connected | Connection status |
+| Connected | On only while the subwoofer is connected and answering; a connection the subwoofer does not answer shows as off |
 
 ## Dashboard Examples
 
@@ -224,7 +224,7 @@ The integration supports device triggers and actions for automations.
 
 | Trigger | Description |
 |---------|-------------|
-| Subwoofer connected | Fires when the subwoofer connects via Bluetooth |
+| Subwoofer connected | Fires when the subwoofer connects via Bluetooth and answers |
 | Subwoofer disconnected | Fires when the subwoofer disconnects |
 | Preset loaded | Fires when a preset is loaded (Preset 1, 2, 3, or Default) |
 

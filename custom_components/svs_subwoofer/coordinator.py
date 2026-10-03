@@ -52,6 +52,10 @@ LIVENESS_STALE_AFTER = 20.0
 # How long to wait for the subwoofer to answer a probe (seconds)
 PROBE_TIMEOUT = 3.0
 
+# Waits between automatic reconnects while a subwoofer keeps not answering
+# (seconds). The first reconnect is immediate; the last delay repeats.
+RECONNECT_BACKOFF = (30.0, 60.0, 120.0, 300.0)
+
 
 class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Coordinator for SVS Subwoofer BLE communication."""
@@ -96,6 +100,14 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Monotonic time of the last notification, and a signal for probes
         self._last_rx = 0.0
         self._rx_event = asyncio.Event()
+        # The sub has answered on the current connection. A sub can accept a
+        # connection and then never answer, so this, not the link, is what
+        # counts as connected.
+        self._responsive = False
+        # Consecutive connections on which the sub did not answer, and when
+        # the keep-alive loop may next reconnect automatically
+        self._silent_attempts = 0
+        self._retry_at = 0.0
 
         # Initialize data with sensible defaults
         # This ensures entities have values even before first device response
@@ -177,8 +189,28 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     @property
     def is_connected(self) -> bool:
-        """Return True if connected to the subwoofer."""
-        return self._connected
+        """Return True if connected and the subwoofer is answering."""
+        return self._connected and self._responsive
+
+    def _note_silence(self) -> None:
+        """Record that the sub did not answer, and schedule the next attempt."""
+        self._silent_attempts += 1
+        if self._silent_attempts == 1:
+            self._retry_at = 0.0
+            _LOGGER.warning(
+                "SVS Subwoofer at %s stopped responding, reconnecting", self.address
+            )
+            return
+        delay = RECONNECT_BACKOFF[
+            min(self._silent_attempts - 2, len(RECONNECT_BACKOFF) - 1)
+        ]
+        self._retry_at = time.monotonic() + delay
+        _LOGGER.warning(
+            "SVS Subwoofer at %s is still not responding, next automatic attempt "
+            "in %d seconds",
+            self.address,
+            delay,
+        )
 
     def _schedule_idle_disconnect(self) -> None:
         """Schedule disconnection after idle timeout.
@@ -218,11 +250,13 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Keep the link busy and reconnect if it has silently died."""
         while True:
             await asyncio.sleep(KEEP_ALIVE_INTERVAL)
-            if self._manual_disconnect:
+            # Back off while the sub keeps not answering, so endless
+            # reconnects do not load the sub or a shared Bluetooth proxy
+            if self._manual_disconnect or time.monotonic() < self._retry_at:
                 continue
             async with self._command_lock:
                 try:
-                    await self._ensure_live()
+                    await self._ensure_live(user_initiated=False)
                 except UpdateFailed as err:
                     _LOGGER.debug(
                         "Keep-alive reconnect to %s failed: %s", self.address, err
@@ -287,13 +321,12 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise UpdateFailed(f"Failed to connect to {self.address}: {err}") from err
 
         self._connected = True
+        self._responsive = False
         self._manual_disconnect = False
         _LOGGER.info("Connected to SVS Subwoofer at %s", self.address)
-        # Notify listeners of connection state change
-        self.async_set_updated_data(self.data)
-        # Fire connected event for device automations
-        self._fire_event(TRIGGER_TYPE_CONNECTED)
-        # Settings may have changed while we were away (e.g. via the SVS app)
+        # Settings may have changed while we were away (e.g. via the SVS app).
+        # The first answer marks the sub as connected; see
+        # _notification_handler.
         await self._request_full_settings()
 
     async def _async_release_client(self) -> None:
@@ -316,11 +349,14 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         Caller must hold _command_lock.
         """
         was_connected = self._connected
+        was_responsive = self._responsive
         self._connected = False
+        self._responsive = False
         await self._async_release_client()
         if was_connected:
             _LOGGER.debug("Disconnected from SVS Subwoofer at %s", self.address)
             self.async_set_updated_data(self.data)
+        if was_responsive:
             self._fire_event(TRIGGER_TYPE_DISCONNECTED)
 
     def _on_disconnect(self, client: BleakClient) -> None:
@@ -329,13 +365,16 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # Callback from a client we already released
             return
         _LOGGER.warning("Disconnected from SVS Subwoofer at %s", self.address)
+        was_responsive = self._responsive
         self._connected = False
+        self._responsive = False
         self._client = None
         self._frame_assembler.reset()
         # Notify listeners of connection state change
         self.async_set_updated_data(self.data)
-        # Fire disconnected event for device automations
-        self._fire_event(TRIGGER_TYPE_DISCONNECTED)
+        # Fire disconnected event for device automations, if connected was fired
+        if was_responsive:
+            self._fire_event(TRIGGER_TYPE_DISCONNECTED)
 
     @callback
     def _notification_handler(
@@ -344,6 +383,15 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Handle incoming BLE notifications."""
         self._last_rx = time.monotonic()
         self._rx_event.set()
+        if not self._responsive:
+            # First answer on this connection: the sub is really connected
+            self._responsive = True
+            self._silent_attempts = 0
+            self._retry_at = 0.0
+            _LOGGER.info("SVS Subwoofer at %s is responding", self.address)
+            self.async_set_updated_data(self.data)
+            # Fire connected event for device automations
+            self._fire_event(TRIGGER_TYPE_CONNECTED)
         decoded = self._frame_assembler.add_data(bytes(data))
 
         if decoded and decoded.get("FRAME_RECOGNIZED"):
@@ -371,21 +419,28 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         await asyncio.sleep(COMMAND_DELAY)
         return True
 
-    async def _ensure_live(self) -> None:
+    async def _ensure_live(self, user_initiated: bool = True) -> None:
         """Make sure there is a responsive connection, reconnecting if needed.
 
-        Caller must hold _command_lock. Raises UpdateFailed if connecting fails.
+        Caller must hold _command_lock. Raises UpdateFailed if connecting fails,
+        or if an automatic reconnect is not due yet because the sub keeps not
+        answering. A user action (a command or the Reconnect button) always
+        tries immediately.
         """
         if self._connected and self._client and self._client.is_connected:
             if time.monotonic() - self._last_rx < LIVENESS_STALE_AFTER:
                 return
             if await self._async_probe():
                 return
-            _LOGGER.warning(
-                "SVS Subwoofer at %s stopped responding, reconnecting", self.address
-            )
             await self._async_drop_connection()
-        await self._connect()
+            self._note_silence()
+            if not user_initiated and time.monotonic() < self._retry_at:
+                raise UpdateFailed(f"{self.address} is not responding, backing off")
+        try:
+            await self._connect()
+        except UpdateFailed:
+            self._note_silence()
+            raise
 
     async def _ensure_writable(self) -> bool:
         """Ensure BLE client is connected and ready for a write.
