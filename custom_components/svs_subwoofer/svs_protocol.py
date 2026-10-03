@@ -199,6 +199,17 @@ def svs_encode(ftype: str, param: str, data: Any = "") -> tuple[bytes, str]:
 
     Returns tuple of (frame_bytes, metadata_string).
     """
+    if ftype in ["SUB_INFO1", "SUB_INFO2", "SUB_INFO3"]:
+        # Subwoofer info requests carry no parameter, just a single zero byte
+        frame = b"\x00"
+        frame = (
+            FRAME_PREAMBLE
+            + SVS_FRAME_TYPES[ftype]
+            + (len(frame) + 7).to_bytes(2, "little")
+            + frame
+        )
+        return (frame + crc_hqx(frame, 0).to_bytes(2, "little"), ftype)
+
     param_info = SVS_PARAMS.get(param)
     if param_info is None:
         _LOGGER.error("Unknown parameter: %s", param)
@@ -265,10 +276,6 @@ def svs_encode(ftype: str, param: str, data: Any = "") -> tuple[bytes, str]:
     elif ftype == "RESET" and param_info.id <= 0xA:
         # Reset frame
         frame = param_info.reset_id.to_bytes(1, "little")
-
-    elif ftype in ["SUB_INFO1", "SUB_INFO2", "SUB_INFO3"]:
-        # Subwoofer info request
-        frame = b"\x00"
 
     else:
         _LOGGER.error("Unknown frame type: %s", ftype)

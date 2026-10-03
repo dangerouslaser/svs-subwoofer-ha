@@ -294,7 +294,7 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Fire connected event for device automations
         self._fire_event(TRIGGER_TYPE_CONNECTED)
         # Settings may have changed while we were away (e.g. via the SVS app)
-        await self._request_full_settings()
+        await self._request_full_settings(versions=True)
 
     async def _async_release_client(self) -> None:
         """Disconnect and forget the BLE client without publishing state.
@@ -352,8 +352,22 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # Update our data store
                 self.data.update(validated)
                 _LOGGER.debug("Updated data: %s", validated)
+                self._update_device_versions(validated)
                 # Notify listeners of new data
                 self.async_set_updated_data(self.data)
+
+    def _update_device_versions(self, values: dict[str, Any]) -> None:
+        """Show reported firmware and hardware versions on the device."""
+        changes = {}
+        if "SW_VERSION" in values:
+            changes["sw_version"] = values["SW_VERSION"]
+        if "HW_VERSION" in values:
+            changes["hw_version"] = values["HW_VERSION"]
+        if not changes:
+            return
+        device_id = self._get_device_id()
+        if device_id:
+            dr.async_get(self.hass).async_update_device(device_id, **changes)
 
     async def _async_probe(self) -> bool:
         """Check the subwoofer still answers on the current connection.
@@ -528,8 +542,12 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await self._async_drop_connection()
                 return False
 
-    async def _request_full_settings(self) -> None:
-        """Request all settings from subwoofer."""
+    async def _request_full_settings(self, versions: bool = False) -> None:
+        """Request all settings from subwoofer.
+
+        Args:
+            versions: Also request the firmware and hardware versions.
+        """
         if not self._client or not self._connected:
             return
 
@@ -539,6 +557,8 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ("MEMREAD", "PRESET2NAME"),
             ("MEMREAD", "PRESET3NAME"),
         ]
+        if versions:
+            requests += [("SUB_INFO2", ""), ("SUB_INFO3", "")]
 
         for ftype, param in requests:
             frame, meta = svs_encode(ftype, param)
