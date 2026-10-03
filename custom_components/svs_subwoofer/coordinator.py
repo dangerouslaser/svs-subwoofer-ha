@@ -170,6 +170,7 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Return device info for the subwoofer."""
         return DeviceInfo(
             identifiers={(DOMAIN, self.address)},
+            connections={(dr.CONNECTION_BLUETOOTH, self.address)},
             name=self.device_name,
             manufacturer="SVS",
             model="Subwoofer",
