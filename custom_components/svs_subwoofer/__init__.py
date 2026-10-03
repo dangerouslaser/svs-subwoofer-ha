@@ -9,8 +9,13 @@ from __future__ import annotations
 import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ADDRESS, CONF_NAME, Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.const import (
+    CONF_ADDRESS,
+    CONF_NAME,
+    EVENT_HOMEASSISTANT_STOP,
+    Platform,
+)
+from homeassistant.core import Event, HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import CONF_KEEP_ALIVE, DEFAULT_KEEP_ALIVE, DOMAIN
@@ -65,6 +70,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: SVSConfigEntry) -> bool:
 
     # Reload when options change so the connection mode takes effect
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+
+    # Home Assistant does not unload config entries when it stops, so
+    # disconnect explicitly instead of abandoning the BLE connection
+    async def _async_stop(event: Event) -> None:
+        await coordinator.async_shutdown()
+
+    entry.async_on_unload(
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
+    )
 
     _LOGGER.info("SVS Subwoofer %s (%s) set up successfully", name, address)
     return True
