@@ -15,6 +15,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import SVSConfigEntry
 from .const import (
     LPF_SLOPES,
+    PRESET_MANUAL,
+    PRESET_MANUAL_OPTION,
     PRESET_MAP,
     PRESETS,
     ROOM_GAIN_FREQUENCIES,
@@ -147,6 +149,8 @@ class SVSSelectEntity(CoordinatorEntity[SVSSubwooferCoordinator], SelectEntity):
             else:
                 preset_options.append(f"Preset {i}")
         preset_options.append("Default")
+        # Shown when the settings no longer match any preset
+        preset_options.append(PRESET_MANUAL_OPTION)
         return preset_options
 
     @property
@@ -171,6 +175,8 @@ class SVSSelectEntity(CoordinatorEntity[SVSSubwooferCoordinator], SelectEntity):
             active = self.coordinator.data.get("ACTIVE_PRESET")
             if active is None:
                 return None
+            if active == PRESET_MANUAL:
+                return PRESET_MANUAL_OPTION
             # Map preset number to current option name (0-indexed into options list)
             current_options = self.options
             idx = active - 1 if active <= 3 else 3  # preset 4 = Default = index 3
@@ -186,6 +192,11 @@ class SVSSelectEntity(CoordinatorEntity[SVSSubwooferCoordinator], SelectEntity):
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
         _LOGGER.debug("Selecting %s for %s", option, self.entity_description.key)
+
+        # Manual is not loaded onto the sub; it only marks the current settings
+        if self.entity_description.is_preset and option == PRESET_MANUAL_OPTION:
+            self.coordinator.set_manual()
+            return
 
         # Use dynamic preset map for presets
         value_map = (
