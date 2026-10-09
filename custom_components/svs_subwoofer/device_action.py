@@ -86,7 +86,8 @@ async def async_call_action_from_config(
 
     if action_type == ACTION_TYPE_LOAD_PRESET:
         preset = config.get(CONF_PRESET, 1)
-        await coordinator.async_load_preset(preset)
+        if not await coordinator.async_load_preset(preset):
+            raise HomeAssistantError(f"Could not load preset {preset}")
 
     elif action_type == ACTION_TYPE_SAVE_PRESET:
         preset = config.get(CONF_PRESET, 1)

@@ -20,7 +20,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 
 from .const import CONF_KEEP_ALIVE, DEFAULT_KEEP_ALIVE, DOMAIN
-from .coordinator import SVSSubwooferCoordinator
+from .coordinator import SVSSubwooferCoordinator, preset_store
 from .services import async_setup_services, async_unload_services
 
 _LOGGER = logging.getLogger(__name__)
@@ -56,6 +56,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: SVSConfigEntry) -> bool:
     dr.async_get(hass).async_get_or_create(
         config_entry_id=entry.entry_id, **coordinator.device_info
     )
+
+    await coordinator.async_load_preset_records()
 
     # Not ready (for example, the Bluetooth proxy has not seen the sub yet
     # after a restart) is not an error: Home Assistant logs the reason, shows
@@ -113,6 +115,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: SVSConfigEntry) -> bool
             async_unload_services(hass)
 
     return unload_ok
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Delete the recorded preset settings when the subwoofer is removed."""
+    await preset_store(hass, entry.data[CONF_ADDRESS]).async_remove()
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:

@@ -6,6 +6,7 @@ import logging
 
 import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
@@ -154,6 +155,7 @@ async def async_load_preset(hass: HomeAssistant, call: ServiceCall) -> None:
 
     _LOGGER.info("Loading preset %s on %d device(s)", preset_num, len(device_ids))
 
+    failed: list[str] = []
     for device_id in device_ids:
         coord = get_coordinator_for_device(hass, device_id)
         if not coord:
@@ -161,10 +163,20 @@ async def async_load_preset(hass: HomeAssistant, call: ServiceCall) -> None:
             continue
 
         try:
-            await coord.async_load_preset(preset_num)
-            _LOGGER.debug("Loaded preset %s on %s", preset_num, coord.device_name)
+            loaded = await coord.async_load_preset(preset_num)
         except Exception as err:
             _LOGGER.warning("Failed to load preset on %s: %s", coord.device_name, err)
+            loaded = False
+        if loaded:
+            _LOGGER.debug("Loaded preset %s on %s", preset_num, coord.device_name)
+        else:
+            failed.append(coord.device_name)
+
+    # Every device was tried; the caller is told which did not load it
+    if failed:
+        raise HomeAssistantError(
+            f"Could not load preset {preset_num} on {', '.join(failed)}"
+        )
 
 
 async def async_setup_services(hass: HomeAssistant) -> None:

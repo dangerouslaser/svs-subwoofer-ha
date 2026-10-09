@@ -3,17 +3,43 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 
-from .const import DOMAIN
+from .const import DOMAIN, PRESET_MANUAL_OPTION
 
 if TYPE_CHECKING:
     from .coordinator import SVSSubwooferCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+
+
+# Names that a preset's own name may not take, as the select shows them
+RESERVED_PRESET_NAMES = ("Default", PRESET_MANUAL_OPTION)
+
+
+def preset_option_names(data: Mapping[str, Any]) -> list[str]:
+    """Return the Preset select's option for each preset slot, 1 to 4.
+
+    A slot's option is its name on the subwoofer, or "Preset N" without one.
+    A name that another option already has, or that is Default or Manual,
+    would give the select two identical options (and Manual would be taken for
+    the Manual option), so it gets the slot added: "Manual (Preset 2)".
+    """
+    names: list[str] = []
+    taken = {name.casefold() for name in RESERVED_PRESET_NAMES}
+    for slot in range(1, 4):
+        name = (data.get(f"PRESET{slot}NAME") or "").replace("\x00", "").strip()
+        name = name or f"Preset {slot}"
+        if name.casefold() in taken:
+            name = f"{name} (Preset {slot})"
+        taken.add(name.casefold())
+        names.append(name)
+    names.append("Default")
+    return names
 
 
 def get_coordinator_for_device(

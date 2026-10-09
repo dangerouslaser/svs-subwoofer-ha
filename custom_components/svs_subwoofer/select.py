@@ -15,6 +15,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import SVSConfigEntry
 from .const import (
     LPF_SLOPES,
+    PRESET_MANUAL,
+    PRESET_MANUAL_OPTION,
     PRESET_MAP,
     PRESETS,
     ROOM_GAIN_FREQUENCIES,
@@ -23,6 +25,7 @@ from .const import (
     STANDBY_MODES,
 )
 from .coordinator import SVSSubwooferCoordinator
+from .helpers import preset_option_names
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -136,18 +139,9 @@ class SVSSelectEntity(CoordinatorEntity[SVSSubwooferCoordinator], SelectEntity):
         if not self.entity_description.is_preset:
             return self._base_options
 
-        # Build preset options with custom names from coordinator data
-        preset_options = []
-        for i in range(1, 4):
-            name_key = f"PRESET{i}NAME"
-            custom_name = self.coordinator.data.get(name_key)
-            if custom_name and custom_name.strip():
-                # Use custom name, strip null bytes and whitespace
-                preset_options.append(custom_name.strip().replace("\x00", ""))
-            else:
-                preset_options.append(f"Preset {i}")
-        preset_options.append("Default")
-        return preset_options
+        # The presets' names from coordinator data, then Manual, which is
+        # shown when the settings no longer match any preset
+        return [*preset_option_names(self.coordinator.data), PRESET_MANUAL_OPTION]
 
     @property
     def _preset_value_map(self) -> dict[str, int]:
@@ -171,6 +165,8 @@ class SVSSelectEntity(CoordinatorEntity[SVSSubwooferCoordinator], SelectEntity):
             active = self.coordinator.data.get("ACTIVE_PRESET")
             if active is None:
                 return None
+            if active == PRESET_MANUAL:
+                return PRESET_MANUAL_OPTION
             # Map preset number to current option name (0-indexed into options list)
             current_options = self.options
             idx = active - 1 if active <= 3 else 3  # preset 4 = Default = index 3
@@ -186,6 +182,11 @@ class SVSSelectEntity(CoordinatorEntity[SVSSubwooferCoordinator], SelectEntity):
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
         _LOGGER.debug("Selecting %s for %s", option, self.entity_description.key)
+
+        # Manual is not loaded onto the sub; it only marks the current settings
+        if self.entity_description.is_preset and option == PRESET_MANUAL_OPTION:
+            self.coordinator.set_manual()
+            return
 
         # Use dynamic preset map for presets
         value_map = (
