@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Final
+from collections.abc import Mapping
+from typing import Any, Final
 
 DOMAIN: Final = "svs_subwoofer"
 
@@ -50,8 +51,51 @@ PRESETS: Final = ["Preset 1", "Preset 2", "Preset 3", "Default"]
 PRESET_MAP: Final = {"Preset 1": 1, "Preset 2": 2, "Preset 3": 3, "Default": 4}
 
 # Options
+# Connection option: one of three modes
+CONF_CONNECTION_MODE: Final = "connection_mode"
+# Connect when needed, disconnect after a period without commands
+CONNECTION_PERIODIC: Final = "periodic"
+# Stay connected, checking the sub with a settings request
+CONNECTION_CONSTANT: Final = "constant"
+# Stay connected with a read that does not wake the panel LEDs
+CONNECTION_QUIET: Final = "quiet"
+CONNECTION_MODES: Final = [CONNECTION_PERIODIC, CONNECTION_CONSTANT, CONNECTION_QUIET]
+
+# Periodic connection timing (seconds)
+CONF_RECONNECT_INTERVAL: Final = "reconnect_interval"
+DEFAULT_RECONNECT_INTERVAL: Final = 0  # 0: only connect when a command is sent
+CONF_DISCONNECT_AFTER: Final = "disconnect_after"
+DEFAULT_DISCONNECT_AFTER: Final = 60
+
+
+# The single Stay connected option of earlier versions
 CONF_KEEP_ALIVE: Final = "keep_alive"
-DEFAULT_KEEP_ALIVE: Final = False
+
+
+def get_connection_mode(options: Mapping[str, Any]) -> str:
+    """Return the chosen connection mode, or the default if none is set.
+
+    An entry set up before the connection modes keeps what it had: Stay
+    connected is now Constant.
+    """
+    mode = options.get(CONF_CONNECTION_MODE)
+    if mode in CONNECTION_MODES:
+        return mode
+    if options.get(CONF_KEEP_ALIVE):
+        return CONNECTION_CONSTANT
+    return CONNECTION_PERIODIC
+
+
+# Read by the Quiet connection, in order of preference: fields of the
+# standard Device Information service, answered by the Bluetooth stack rather
+# than the SVS control software, so reading them does not wake the panel
+# LEDs. The first one the subwoofer offers as readable is used.
+QUIET_KEEP_ALIVE_CHAR_UUIDS: Final = [
+    "00002a25-0000-1000-8000-00805f9b34fb",  # Serial Number String
+    "00002a24-0000-1000-8000-00805f9b34fb",  # Model Number String
+    "00002a26-0000-1000-8000-00805f9b34fb",  # Firmware Revision String
+    "00002a29-0000-1000-8000-00805f9b34fb",  # Manufacturer Name String
+]
 
 # Command rate limiting (seconds)
 COMMAND_DELAY: Final = 0.2

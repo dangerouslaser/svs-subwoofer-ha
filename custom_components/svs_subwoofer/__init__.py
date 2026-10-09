@@ -19,7 +19,17 @@ from homeassistant.core import Event, HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 
-from .const import CONF_KEEP_ALIVE, DEFAULT_KEEP_ALIVE, DOMAIN
+from .const import (
+    CONF_DISCONNECT_AFTER,
+    CONF_RECONNECT_INTERVAL,
+    CONNECTION_CONSTANT,
+    CONNECTION_PERIODIC,
+    CONNECTION_QUIET,
+    DEFAULT_DISCONNECT_AFTER,
+    DEFAULT_RECONNECT_INTERVAL,
+    DOMAIN,
+    get_connection_mode,
+)
 from .coordinator import SVSSubwooferCoordinator
 from .services import async_setup_services, async_unload_services
 
@@ -43,12 +53,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: SVSConfigEntry) -> bool:
 
     _LOGGER.debug("Setting up SVS Subwoofer: %s (%s)", name, address)
 
+    mode = get_connection_mode(entry.options)
     coordinator = SVSSubwooferCoordinator(
         hass,
         entry.entry_id,
         address,
         name,
-        keep_alive=entry.options.get(CONF_KEEP_ALIVE, DEFAULT_KEEP_ALIVE),
+        keep_alive=mode == CONNECTION_CONSTANT,
+        quiet_keep_alive=mode == CONNECTION_QUIET,
+        idle_timeout=entry.options.get(CONF_DISCONNECT_AFTER, DEFAULT_DISCONNECT_AFTER),
+        refresh_interval=(
+            entry.options.get(CONF_RECONNECT_INTERVAL, DEFAULT_RECONNECT_INTERVAL)
+            if mode == CONNECTION_PERIODIC
+            else 0
+        ),
     )
 
     # Register the device before connecting, so the firmware version and

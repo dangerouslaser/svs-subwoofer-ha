@@ -19,8 +19,28 @@ from homeassistant.config_entries import (
 from homeassistant.const import CONF_ADDRESS, CONF_NAME
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import format_mac
+from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
-from .const import CONF_KEEP_ALIVE, DEFAULT_KEEP_ALIVE, DOMAIN, SVS_SERVICE_UUID
+from .const import (
+    CONF_CONNECTION_MODE,
+    CONF_DISCONNECT_AFTER,
+    CONF_RECONNECT_INTERVAL,
+    CONNECTION_MODES,
+    CONNECTION_PERIODIC,
+    DEFAULT_DISCONNECT_AFTER,
+    DEFAULT_RECONNECT_INTERVAL,
+    DOMAIN,
+    SVS_SERVICE_UUID,
+    get_connection_mode,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,7 +62,7 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         """Return the options flow."""
-        return SVSSubwooferOptionsFlow(config_entry)
+        return SVSSubwooferOptionsFlow()
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
@@ -254,31 +274,117 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class SVSSubwooferOptionsFlow(OptionsFlow):
-    """Handle options for SVS Subwoofer."""
+def _duration_selector(minimum: int, maximum: int, step: int) -> NumberSelector:
+    """Return a number box for a duration in seconds."""
+    return NumberSelector(
+        NumberSelectorConfig(
+            min=minimum,
+            max=maximum,
+            step=step,
+            unit_of_measurement="s",
+            mode=NumberSelectorMode.BOX,
+        )
+    )
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
-        """Initialize options flow."""
-        # Not self.config_entry: assigning that is deprecated on newer HA
-        self._entry = config_entry
+
+class SVSSubwooferOptionsFlow(OptionsFlow):
+    """Handle the Bluetooth connection options for SVS Subwoofer.
+
+    The timing options only apply to the Periodic connection, so they are
+    shown on a second step only in that case.
+    """
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Manage the connection options."""
+        """Choose the connection mode."""
+        options = self.config_entry.options
         if user_input is not None:
-            return self.async_create_entry(data=user_input)
+            if user_input[CONF_CONNECTION_MODE] == CONNECTION_PERIODIC:
+                return await self.async_step_timing()
+            # Keep the timing values for when Periodic is chosen again
+            return self.async_create_entry(
+                data={
+                    CONF_CONNECTION_MODE: user_input[CONF_CONNECTION_MODE],
+                    CONF_RECONNECT_INTERVAL: options.get(
+                        CONF_RECONNECT_INTERVAL, DEFAULT_RECONNECT_INTERVAL
+                    ),
+                    CONF_DISCONNECT_AFTER: options.get(
+                        CONF_DISCONNECT_AFTER, DEFAULT_DISCONNECT_AFTER
+                    ),
+                }
+            )
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(
-                        CONF_KEEP_ALIVE,
-                        default=self._entry.options.get(
-                            CONF_KEEP_ALIVE, DEFAULT_KEEP_ALIVE
-                        ),
-                    ): bool,
+                    vol.Required(
+                        CONF_CONNECTION_MODE,
+                        default=get_connection_mode(self.config_entry.options),
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[
+                                SelectOptionDict(value=mode, label=mode.capitalize())
+                                for mode in CONNECTION_MODES
+                            ],
+                            translation_key=CONF_CONNECTION_MODE,
+                            mode=SelectSelectorMode.LIST,
+                        )
+                    ),
                 }
             ),
+        )
+
+    async def async_step_timing(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Set the Periodic connection timing."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            # An emptied field uses its default, not the value stored before
+            interval = user_input.get(
+                CONF_RECONNECT_INTERVAL, DEFAULT_RECONNECT_INTERVAL
+            )
+            hang_on = user_input.get(CONF_DISCONNECT_AFTER, DEFAULT_DISCONNECT_AFTER)
+            # A refresh that is not longer than the hang-on time keeps the
+            # link up nearly all the time and lights the panel LEDs at every
+            # reconnect
+            if 0 < interval <= hang_on:
+                errors[CONF_RECONNECT_INTERVAL] = "refresh_within_hang_on"
+            else:
+                return self.async_create_entry(
+                    data={
+                        CONF_CONNECTION_MODE: CONNECTION_PERIODIC,
+                        CONF_RECONNECT_INTERVAL: interval,
+                        CONF_DISCONNECT_AFTER: hang_on,
+                    }
+                )
+
+        # The fields start with the stored values (or what was just entered)
+        # as suggestions, so that a field emptied on submit is left out
+        shown = self.config_entry.options if user_input is None else user_input
+        return self.async_show_form(
+            step_id="timing",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_RECONNECT_INTERVAL,
+                        description={
+                            "suggested_value": shown.get(
+                                CONF_RECONNECT_INTERVAL, DEFAULT_RECONNECT_INTERVAL
+                            )
+                        },
+                    ): _duration_selector(0, 3600, 10),
+                    vol.Optional(
+                        CONF_DISCONNECT_AFTER,
+                        description={
+                            "suggested_value": shown.get(
+                                CONF_DISCONNECT_AFTER, DEFAULT_DISCONNECT_AFTER
+                            )
+                        },
+                    ): _duration_selector(10, 600, 10),
+                }
+            ),
+            errors=errors,
         )

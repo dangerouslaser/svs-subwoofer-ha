@@ -37,12 +37,27 @@
   "options": {
     "step": {
       "init": {
-        "title": "Connection Options",
-        "description": "By default the integration disconnects after 60 seconds without commands so the SVS app can connect. Enable \"Stay connected\" if commands stop working after the subwoofer has been idle; the integration will then keep the connection open and check it every 30 seconds. Use the Disconnect button when you need the SVS app.",
+        "title": "Bluetooth Connection Options",
+        "description": "Choose how Home Assistant manages the Bluetooth connection to this subwoofer. SVS subwoofers accept only one Bluetooth connection at a time, so use the Disconnect button whenever you need the SVS app.",
         "data": {
-          "keep_alive": "Stay connected"
+          "connection_mode": "Connection"
+        }
+      },
+      "timing": {
+        "title": "Bluetooth Connection Options",
+        "description": "These settings control the Periodic connection: when Home Assistant connects on its own, and how long it stays connected after a command. An empty field uses its default.",
+        "data": {
+          "reconnect_interval": "Refresh interval",
+          "disconnect_after": "Connection hang-on time"
+        },
+        "data_description": {
+          "reconnect_interval": "While disconnected, how often Home Assistant briefly connects to refresh the subwoofer's settings, for example after a change made in the SVS app or on the rear panel. Each refresh briefly lights the panel LEDs. Must be longer than the connection hang-on time. Set to 0 to connect only when a command is sent.",
+          "disconnect_after": "How long the connection remains active after the last command. A shorter time frees the subwoofer for the SVS app sooner."
         }
       }
+    },
+    "error": {
+      "refresh_within_hang_on": "The refresh interval must be longer than the connection hang-on time, or 0. A shorter one keeps the subwoofer connected almost all the time and lights its panel LEDs at every refresh."
     }
   },
   "entity": {
@@ -161,6 +176,15 @@
       "save_preset": "Save to preset",
       "set_volume": "Set volume",
       "reconnect": "Reconnect"
+    }
+  },
+  "selector": {
+    "connection_mode": {
+      "options": {
+        "periodic": "Periodic – Connects when a command is sent and disconnects after a period without commands. Select Submit to set the timing.",
+        "constant": "Constant – Stays connected and asks the subwoofer for its settings every 30 seconds, so a stalled subwoofer or a change made on its rear panel is noticed within 30 seconds. The panel LEDs light briefly at each check.",
+        "quiet": "Quiet – Stays connected and checks only the Bluetooth link every 30 seconds, so the panel LEDs stay dark. A stalled subwoofer or a change made on its rear panel is noticed at the next command instead."
+      }
     }
   }
 }
