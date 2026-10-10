@@ -17,10 +17,37 @@ from homeassistant.config_entries import (
     OptionsFlow,
 )
 from homeassistant.const import CONF_ADDRESS, CONF_NAME
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import format_mac
+from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
-from .const import CONF_KEEP_ALIVE, DEFAULT_KEEP_ALIVE, DOMAIN, SVS_SERVICE_UUID
+from .const import (
+    CONF_ENTRY_TYPE,
+    CONF_GROUP_FEATURES,
+    CONF_KEEP_ALIVE,
+    CONF_MEMBERS,
+    CONF_OFFSETS,
+    CONF_VOLUME_MODE,
+    DEFAULT_KEEP_ALIVE,
+    DOMAIN,
+    ENTRY_TYPE_GROUP,
+    GROUP_FEATURE_VOLUME,
+    GROUP_FEATURES,
+    OFFSET_MAX,
+    OFFSET_MIN,
+    SVS_SERVICE_UUID,
+    VOLUME_MODE_MATCHED,
+    VOLUME_MODE_OFFSET,
+    VOLUME_MODES,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,7 +55,176 @@ _LOGGER = logging.getLogger(__name__)
 SVS_MAC_PREFIX = "08:EB:ED"
 
 
-class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
+def _subwoofer_entries(hass: HomeAssistant) -> list[ConfigEntry]:
+    """Return the config entries for subwoofers (not subwoofer groups)."""
+    return [
+        entry
+        for entry in hass.config_entries.async_entries(DOMAIN)
+        if entry.data.get(CONF_ENTRY_TYPE) != ENTRY_TYPE_GROUP
+    ]
+
+
+def _same_members_group(
+    hass: HomeAssistant, members: list[str], exclude: str | None = None
+) -> ConfigEntry | None:
+    """Return another group with exactly these members, if there is one."""
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        if (
+            entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_GROUP
+            and entry.entry_id != exclude
+            and set(entry.options.get(CONF_MEMBERS, [])) == set(members)
+        ):
+            return entry
+    return None
+
+
+class GroupStepsMixin:
+    """The subwoofer group steps, shared by the config and options flows.
+
+    Collects the group settings in self._group and finishes with
+    self._async_finish_group().
+    """
+
+    hass: HomeAssistant
+    _group: dict[str, Any]
+
+    def _member_labels(self) -> dict[str, str]:
+        """Return the subwoofers that can be members, address -> name, by name."""
+        labels: dict[str, str] = {}
+        for entry in _subwoofer_entries(self.hass):
+            address = entry.data[CONF_ADDRESS]
+            labels[address] = entry.title
+        # Two subwoofers with the same name are told apart by address
+        names = list(labels.values())
+        labels = {
+            address: name if names.count(name) == 1 else f"{name} ({address})"
+            for address, name in labels.items()
+        }
+        return dict(sorted(labels.items(), key=lambda item: item[1].casefold()))
+
+    def _members_schema(self, extra: dict[Any, Any]) -> vol.Schema:
+        labels = self._member_labels()
+        members = [a for a in self._group.get(CONF_MEMBERS, []) if a in labels]
+        return vol.Schema(
+            {
+                **extra,
+                vol.Required(CONF_MEMBERS, default=members): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            SelectOptionDict(value=address, label=label)
+                            for address, label in labels.items()
+                        ],
+                        multiple=True,
+                        mode=SelectSelectorMode.LIST,
+                    )
+                ),
+                vol.Optional(
+                    CONF_GROUP_FEATURES,
+                    default=self._group.get(CONF_GROUP_FEATURES, GROUP_FEATURES),
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=GROUP_FEATURES,
+                        multiple=True,
+                        translation_key=CONF_GROUP_FEATURES,
+                        mode=SelectSelectorMode.LIST,
+                    )
+                ),
+            }
+        )
+
+    async def _async_members_done(self) -> ConfigFlowResult:
+        """Continue after the members and features are chosen."""
+        if GROUP_FEATURE_VOLUME in self._group[CONF_GROUP_FEATURES]:
+            return await self.async_step_group_volume()
+        return await self._async_finish_group()
+
+    async def async_step_group_volume(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Choose how the group volume moves the subwoofers."""
+        if user_input is not None:
+            self._group[CONF_VOLUME_MODE] = user_input[CONF_VOLUME_MODE]
+            if self._group[CONF_VOLUME_MODE] == VOLUME_MODE_OFFSET:
+                return await self.async_step_group_offsets()
+            return await self._async_finish_group()
+
+        return self.async_show_form(  # type: ignore[attr-defined]
+            step_id="group_volume",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_VOLUME_MODE,
+                        default=self._group.get(CONF_VOLUME_MODE, VOLUME_MODE_MATCHED),
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=VOLUME_MODES,
+                            translation_key=CONF_VOLUME_MODE,
+                            mode=SelectSelectorMode.LIST,
+                        )
+                    ),
+                }
+            ),
+        )
+
+    async def async_step_group_offsets(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Set each subwoofer's offset from the group volume."""
+        labels = self._member_labels()
+        members = self._group[CONF_MEMBERS]
+        # The fields are named after the subwoofers, so the dialog shows them
+        fields = {label: a for a, label in labels.items() if a in members}
+        if user_input is not None:
+            shown = set(fields.values())
+            self._group[CONF_OFFSETS] = {
+                # A member without a field here (not set up) keeps its offset
+                **{
+                    address: offset
+                    for address, offset in self._group.get(CONF_OFFSETS, {}).items()
+                    if address in members and address not in shown
+                },
+                **{
+                    address: int(user_input.get(field, 0))
+                    for field, address in fields.items()
+                },
+            }
+            return await self._async_finish_group()
+
+        offsets = self._group.get(CONF_OFFSETS, {})
+        return self.async_show_form(  # type: ignore[attr-defined]
+            step_id="group_offsets",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        field, default=offsets.get(address, 0)
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=OFFSET_MIN,
+                            max=OFFSET_MAX,
+                            step=1,
+                            unit_of_measurement="dB",
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    )
+                    for field, address in fields.items()
+                }
+            ),
+        )
+
+    def _group_options(self) -> dict[str, Any]:
+        """Return the options to store for the group."""
+        return {
+            CONF_MEMBERS: self._group[CONF_MEMBERS],
+            CONF_GROUP_FEATURES: self._group[CONF_GROUP_FEATURES],
+            CONF_VOLUME_MODE: self._group.get(CONF_VOLUME_MODE, VOLUME_MODE_MATCHED),
+            CONF_OFFSETS: self._group.get(CONF_OFFSETS, {}),
+        }
+
+    async def _async_finish_group(self) -> ConfigFlowResult:
+        raise NotImplementedError
+
+
+class SVSSubwooferConfigFlow(GroupStepsMixin, ConfigFlow, domain=DOMAIN):
     """Handle config flow for SVS Subwoofer."""
 
     VERSION = 1
@@ -37,12 +233,52 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
         """Initialize config flow."""
         self._discovery_info: BluetoothServiceInfoBleak | None = None
         self._discovered_devices: dict[str, BluetoothServiceInfoBleak] = {}
+        self._group: dict[str, Any] = {}
 
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         """Return the options flow."""
+        if config_entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_GROUP:
+            return SVSGroupOptionsFlow(config_entry)
         return SVSSubwooferOptionsFlow(config_entry)
+
+    async def async_step_create_group(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Name the group and choose its members and what it controls."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            if len(user_input[CONF_MEMBERS]) < 2:
+                errors[CONF_MEMBERS] = "too_few_members"
+            elif _same_members_group(self.hass, user_input[CONF_MEMBERS]):
+                errors[CONF_MEMBERS] = "duplicate_group"
+            else:
+                self._group = {
+                    CONF_NAME: user_input[CONF_NAME].strip(),
+                    CONF_MEMBERS: user_input[CONF_MEMBERS],
+                    CONF_GROUP_FEATURES: user_input.get(
+                        CONF_GROUP_FEATURES, GROUP_FEATURES
+                    ),
+                }
+                return await self._async_members_done()
+            self._group = {**self._group, **user_input}
+
+        return self.async_show_form(
+            step_id="create_group",
+            data_schema=self._members_schema(
+                {vol.Required(CONF_NAME, default=self._group.get(CONF_NAME, "")): str}
+            ),
+            errors=errors,
+        )
+
+    async def _async_finish_group(self) -> ConfigFlowResult:
+        """Create the group entry."""
+        return self.async_create_entry(
+            title=self._group[CONF_NAME] or "Subwoofer group",
+            data={CONF_ENTRY_TYPE: ENTRY_TYPE_GROUP},
+            options=self._group_options(),
+        )
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
@@ -99,6 +335,16 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Offer a subwoofer group once at least two subwoofers are set up."""
+        if len(_subwoofer_entries(self.hass)) >= 2:
+            return self.async_show_menu(
+                step_id="user", menu_options=["add_subwoofer", "create_group"]
+            )
+        return await self.async_step_add_subwoofer(user_input)
+
+    async def async_step_add_subwoofer(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle user-initiated configuration.
@@ -197,7 +443,7 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
             addresses["manual"] = "Enter MAC address manually..."
 
             return self.async_show_form(
-                step_id="user",
+                step_id="add_subwoofer",
                 data_schema=vol.Schema(
                     {
                         vol.Required(CONF_ADDRESS): vol.In(addresses),
@@ -282,3 +528,51 @@ class SVSSubwooferOptionsFlow(OptionsFlow):
                 }
             ),
         )
+
+
+class SVSGroupOptionsFlow(GroupStepsMixin, OptionsFlow):
+    """Change a subwoofer group's members and settings.
+
+    The group is renamed with Home Assistant's own rename, like any device.
+    """
+
+    def __init__(self, config_entry: ConfigEntry) -> None:
+        """Initialize options flow."""
+        # Not self.config_entry: assigning that is deprecated on newer HA
+        self._entry = config_entry
+        self._group: dict[str, Any] = dict(config_entry.options)
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Start with the members and features."""
+        return await self.async_step_group_members()
+
+    async def async_step_group_members(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Choose the members and what the group controls."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            if len(user_input[CONF_MEMBERS]) < 2:
+                errors[CONF_MEMBERS] = "too_few_members"
+            elif _same_members_group(
+                self.hass, user_input[CONF_MEMBERS], exclude=self._entry.entry_id
+            ):
+                errors[CONF_MEMBERS] = "duplicate_group"
+            else:
+                self._group[CONF_MEMBERS] = user_input[CONF_MEMBERS]
+                self._group[CONF_GROUP_FEATURES] = user_input.get(
+                    CONF_GROUP_FEATURES, GROUP_FEATURES
+                )
+                return await self._async_members_done()
+
+        return self.async_show_form(
+            step_id="group_members",
+            data_schema=self._members_schema({}),
+            errors=errors,
+        )
+
+    async def _async_finish_group(self) -> ConfigFlowResult:
+        """Save the group options."""
+        return self.async_create_entry(data=self._group_options())

@@ -49,9 +49,41 @@ STANDBY_MODE_MAP: Final = {"Auto ON": 0, "Trigger": 1, "ON": 2}
 PRESETS: Final = ["Preset 1", "Preset 2", "Preset 3", "Default"]
 PRESET_MAP: Final = {"Preset 1": 1, "Preset 2": 2, "Preset 3": 3, "Default": 4}
 
+# Active preset value when the settings no longer match any known preset
+PRESET_MANUAL: Final = 0
+PRESET_MANUAL_OPTION: Final = "Manual"
+
 # Options
 CONF_KEEP_ALIVE: Final = "keep_alive"
 DEFAULT_KEEP_ALIVE: Final = False
+
+# Subwoofer groups: config entries with data {CONF_ENTRY_TYPE: ENTRY_TYPE_GROUP}
+CONF_ENTRY_TYPE: Final = "entry_type"
+ENTRY_TYPE_GROUP: Final = "group"
+# Group options
+CONF_MEMBERS: Final = "members"  # member subwoofer addresses
+CONF_GROUP_FEATURES: Final = "features"
+GROUP_FEATURE_PRESET: Final = "preset"
+GROUP_FEATURE_STANDBY: Final = "standby"
+GROUP_FEATURE_VOLUME: Final = "volume"
+GROUP_FEATURES: Final = [
+    GROUP_FEATURE_PRESET,
+    GROUP_FEATURE_STANDBY,
+    GROUP_FEATURE_VOLUME,
+]
+CONF_VOLUME_MODE: Final = "volume_mode"
+VOLUME_MODE_MATCHED: Final = "matched"
+VOLUME_MODE_OFFSET: Final = "offset"
+VOLUME_MODES: Final = [VOLUME_MODE_MATCHED, VOLUME_MODE_OFFSET]
+CONF_OFFSETS: Final = "offsets"  # member address -> offset in dB
+OFFSET_MIN: Final = -20
+OFFSET_MAX: Final = 20
+# Group device identifiers start with this, so they never match a subwoofer
+GROUP_ID_PREFIX: Final = "group_"
+# Shown by a group setting when its members differ
+GROUP_STATE_MIXED: Final = "Mixed"
+# Dispatched when a subwoofer is set up or unloaded, so groups re-read members
+SIGNAL_MEMBERS_CHANGED: Final = f"{DOMAIN}_members_changed"
 
 # Command rate limiting (seconds)
 COMMAND_DELAY: Final = 0.2
@@ -127,3 +159,8 @@ SYNCABLE_PARAMS: Final = [
     "STANDBY",
     "POLARITY",
 ]
+
+# Parameters compared to recognize which preset is active. Standby is a
+# system setting rather than part of the sound profile, so a standby change
+# must not make the preset look modified.
+PRESET_PARAMS: Final = [param for param in SYNCABLE_PARAMS if param != "STANDBY"]

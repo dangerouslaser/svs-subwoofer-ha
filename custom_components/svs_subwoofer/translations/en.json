@@ -1,14 +1,6 @@
 {
   "config": {
     "step": {
-      "user": {
-        "title": "Add SVS Subwoofer",
-        "description": "Select your subwoofer from the list below. Devices are shown by the name you set in the SVS app (e.g., RIGHTSUB, LEFTSUB). Devices marked [SVS] are detected SVS subwoofers.\n\nLeave the name blank to use the device's advertised name.",
-        "data": {
-          "address": "Device",
-          "name": "Custom Name (optional)"
-        }
-      },
       "manual": {
         "title": "Manual Setup",
         "description": "Enter the Bluetooth MAC address of your SVS subwoofer. Format: {mac_format}\n\nTip: Use `bluetoothctl` and `scan on` to find your subwoofer's MAC address.",
@@ -23,11 +15,53 @@
         "data": {
           "name": "Device Name"
         }
+      },
+      "user": {
+        "title": "SVS Subwoofer",
+        "description": "Add another subwoofer, or combine subwoofers you have already added into a group.",
+        "menu_options": {
+          "add_subwoofer": "Add a subwoofer",
+          "create_group": "Create a subwoofer group"
+        }
+      },
+      "add_subwoofer": {
+        "title": "Add SVS Subwoofer",
+        "description": "Select your subwoofer from the list below. Devices are shown by the name you set in the SVS app (e.g., RIGHTSUB, LEFTSUB). Devices marked [SVS] are detected SVS subwoofers.\n\nLeave the name blank to use the device's advertised name.",
+        "data": {
+          "address": "Device",
+          "name": "Custom Name (optional)"
+        }
+      },
+      "create_group": {
+        "title": "Create a Subwoofer Group",
+        "description": "A group controls several subwoofers together from one device. Changing a subwoofer on its own never changes the group or the other subwoofers.",
+        "data": {
+          "name": "Group name",
+          "members": "Members",
+          "features": "Control together"
+        },
+        "data_description": {
+          "members": "Choose at least two subwoofers.",
+          "features": "Each enabled setting gets a group entity that controls it on every member. Members keep all of their own controls."
+        }
+      },
+      "group_volume": {
+        "title": "Group Volume",
+        "description": "Choose how the group volume moves the subwoofers.",
+        "data": {
+          "volume_mode": "Volume mode"
+        }
+      },
+      "group_offsets": {
+        "title": "Volume Offsets",
+        "description": "Each subwoofer plays at the group volume plus its offset."
       }
     },
     "error": {
       "invalid_mac": "Invalid MAC address format",
-      "cannot_connect": "Failed to connect to device"
+      "cannot_connect": "Failed to connect to device",
+      "too_few_members": "Choose at least two subwoofers.",
+      "duplicate_group": "These subwoofers are already a group. Choose different subwoofers, or change the existing group."
     },
     "abort": {
       "already_configured": "Device is already configured",
@@ -42,7 +76,34 @@
         "data": {
           "keep_alive": "Stay connected"
         }
+      },
+      "group_members": {
+        "title": "Subwoofer Group",
+        "description": "Change the subwoofers in this group and what it controls. To rename the group, use the rename option on its device or integration entry.",
+        "data": {
+          "members": "Members",
+          "features": "Control together"
+        },
+        "data_description": {
+          "members": "Choose at least two subwoofers.",
+          "features": "Each enabled setting gets a group entity that controls it on every member. Members keep all of their own controls."
+        }
+      },
+      "group_volume": {
+        "title": "Group Volume",
+        "description": "Choose how the group volume moves the subwoofers.",
+        "data": {
+          "volume_mode": "Volume mode"
+        }
+      },
+      "group_offsets": {
+        "title": "Volume Offsets",
+        "description": "Each subwoofer plays at the group volume plus its offset."
       }
+    },
+    "error": {
+      "too_few_members": "Choose at least two subwoofers.",
+      "duplicate_group": "These subwoofers are already a group. Choose different subwoofers, or change the existing group."
     }
   },
   "entity": {
@@ -104,6 +165,9 @@
       },
       "peq3_q_factor": {
         "name": "PEQ3 Q-Factor"
+      },
+      "group_volume": {
+        "name": "Volume"
       }
     },
     "select": {
@@ -121,6 +185,12 @@
       },
       "preset": {
         "name": "Preset"
+      },
+      "group_preset": {
+        "name": "Preset"
+      },
+      "group_standby_mode": {
+        "name": "Standby Mode"
       }
     },
     "switch": {
@@ -161,6 +231,27 @@
       "save_preset": "Save to preset",
       "set_volume": "Set volume",
       "reconnect": "Reconnect"
+    }
+  },
+  "selector": {
+    "features": {
+      "options": {
+        "preset": "Preset",
+        "standby": "Standby mode",
+        "volume": "Volume"
+      }
+    },
+    "volume_mode": {
+      "options": {
+        "matched": "Matched – Every subwoofer plays at the group volume.",
+        "offset": "Offset – Each subwoofer plays at the group volume plus its own offset."
+      }
+    }
+  },
+  "issues": {
+    "group_too_few_members": {
+      "title": "{group} has fewer than two subwoofers",
+      "description": "A subwoofer in the group {group} was removed, so the group now has {count}. A group needs at least two subwoofers. Open the group's settings (Configure) to choose its subwoofers, or delete the group."
     }
   }
 }

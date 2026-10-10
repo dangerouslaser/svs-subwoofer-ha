@@ -21,6 +21,7 @@ from .const import (
     CONF_PRESET,
     CONF_VOLUME,
     DOMAIN,
+    GROUP_ID_PREFIX,
     VOLUME_MAX,
     VOLUME_MIN,
 )
@@ -49,8 +50,11 @@ async def async_get_actions(
     if not device:
         return []
 
-    # Check if this device belongs to our domain
-    if not any(identifier[0] == DOMAIN for identifier in device.identifiers):
+    # Check if this device is one of our subwoofers (not a subwoofer group)
+    if not any(
+        identifier[0] == DOMAIN and not identifier[1].startswith(GROUP_ID_PREFIX)
+        for identifier in device.identifiers
+    ):
         return []
 
     actions = []
@@ -86,7 +90,8 @@ async def async_call_action_from_config(
 
     if action_type == ACTION_TYPE_LOAD_PRESET:
         preset = config.get(CONF_PRESET, 1)
-        await coordinator.async_load_preset(preset)
+        if not await coordinator.async_load_preset(preset):
+            raise HomeAssistantError(f"Could not load preset {preset}")
 
     elif action_type == ACTION_TYPE_SAVE_PRESET:
         preset = config.get(CONF_PRESET, 1)
