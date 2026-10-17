@@ -15,6 +15,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import SVSConfigEntry
 from .coordinator import SVSSubwooferCoordinator
+from .subwoofer_group import SVSGroup, SVSGroupEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -78,6 +79,10 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up SVS switch entities."""
+    if isinstance(entry.runtime_data, SVSGroup):
+        async_add_entities([SVSGroupConnectionSwitch(entry.runtime_data)])
+        return
+
     coordinator = entry.runtime_data
 
     async_add_entities(
@@ -129,3 +134,36 @@ class SVSSwitchEntity(CoordinatorEntity[SVSSubwooferCoordinator], SwitchEntity):
             raise HomeAssistantError(
                 f"Failed to turn off {self.entity_description.key}"
             )
+
+
+class SVSGroupConnectionSwitch(SVSGroupEntity, SwitchEntity):
+    """The group's Bluetooth connections as one switch.
+
+    On while every member is connected. Turning it on connects every member
+    and turning it off disconnects every member (until its next command);
+    each is confirmed, and a member that does not follow is tried again.
+    """
+
+    _attr_translation_key = "group_connection"
+
+    def __init__(self, group: SVSGroup) -> None:
+        """Initialize the switch."""
+        super().__init__(group, "connection")
+
+    @property
+    def is_on(self) -> bool:
+        """Return True while every member is connected."""
+        return self.svs_group.all_connected
+
+    @property
+    def icon(self) -> str:
+        """Return the icon for the connection state."""
+        return "mdi:bluetooth-connect" if self.is_on else "mdi:bluetooth-off"
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Connect every member."""
+        await self.svs_group.async_connect()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Disconnect every member."""
+        await self.svs_group.async_disconnect()

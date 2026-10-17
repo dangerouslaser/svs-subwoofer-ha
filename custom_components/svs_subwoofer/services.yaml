@@ -4,14 +4,17 @@ sync_from:
   fields:
     source_device_id:
       name: Source Device
-      description: The subwoofer to copy settings from.
+      description: The subwoofer to copy settings from (a single subwoofer, not a group).
       required: true
       selector:
         device:
           integration: svs_subwoofer
+          # Single subwoofers only: a group has no Connected sensor
+          entity:
+            - domain: binary_sensor
     target_device_ids:
       name: Target Devices
-      description: The subwoofer(s) to copy settings to.
+      description: The subwoofer(s) to copy settings to. A group stands for its subwoofers, other than the source.
       required: true
       selector:
         device:
@@ -24,7 +27,7 @@ set_volume:
   fields:
     device_ids:
       name: Devices
-      description: The subwoofer(s) to adjust.
+      description: The subwoofer(s) to adjust. A group stands for its subwoofers, at the group's own offsets.
       required: true
       selector:
         device:
@@ -43,7 +46,7 @@ set_volume:
           mode: slider
     offsets:
       name: Per-Device Offsets
-      description: Optional volume offsets per device (device_id to dB offset mapping). Useful for room correction.
+      description: Optional volume offsets per device (device_id to dB offset mapping). Useful for room correction. A subwoofer of a group given here uses this offset instead of the group's.
       required: false
       example: '{"device_id_here": -3}'
       selector:
@@ -55,7 +58,7 @@ load_preset:
   fields:
     device_ids:
       name: Devices
-      description: The subwoofer(s) to update.
+      description: The subwoofer(s) to update. A group stands for its subwoofers.
       required: true
       selector:
         device:

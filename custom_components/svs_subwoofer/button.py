@@ -13,6 +13,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity, UpdateFa
 
 from . import SVSConfigEntry
 from .coordinator import SVSSubwooferCoordinator
+from .subwoofer_group import SVSGroup, SVSGroupEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,6 +24,13 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up SVS button entities."""
+    if isinstance(entry.runtime_data, SVSGroup):
+        group = entry.runtime_data
+        async_add_entities(
+            [SVSGroupConnectButton(group), SVSGroupDisconnectButton(group)]
+        )
+        return
+
     coordinator = entry.runtime_data
 
     entities = [
@@ -103,3 +111,33 @@ class SVSSavePresetButton(CoordinatorEntity[SVSSubwooferCoordinator], ButtonEnti
             self.coordinator.address,
         )
         await self.coordinator.async_save_preset(self._preset_number)
+
+
+class SVSGroupConnectButton(SVSGroupEntity, ButtonEntity):
+    """Button to connect every member of the group."""
+
+    _attr_translation_key = "group_connect"
+    _attr_icon = "mdi:bluetooth-connect"
+
+    def __init__(self, group: SVSGroup) -> None:
+        """Initialize the button."""
+        super().__init__(group, "connect")
+
+    async def async_press(self) -> None:
+        """Connect every member, confirming each."""
+        await self.svs_group.async_connect()
+
+
+class SVSGroupDisconnectButton(SVSGroupEntity, ButtonEntity):
+    """Button to disconnect every member of the group (e.g. to use the SVS app)."""
+
+    _attr_translation_key = "group_disconnect"
+    _attr_icon = "mdi:bluetooth-off"
+
+    def __init__(self, group: SVSGroup) -> None:
+        """Initialize the button."""
+        super().__init__(group, "disconnect")
+
+    async def async_press(self) -> None:
+        """Disconnect every member until its next command, confirming each."""
+        await self.svs_group.async_disconnect()

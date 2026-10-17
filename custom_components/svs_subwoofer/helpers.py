@@ -9,10 +9,11 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 
-from .const import DOMAIN, PRESET_MANUAL_OPTION
+from .const import DOMAIN, GROUP_ID_PREFIX, PRESET_MANUAL_OPTION
 
 if TYPE_CHECKING:
     from .coordinator import SVSSubwooferCoordinator
+    from .subwoofer_group import SVSGroup
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,3 +76,39 @@ def get_coordinator_for_device(
 
     _LOGGER.warning("No coordinator found for device: %s", device_id)
     return None
+
+
+def get_group_for_device(hass: HomeAssistant, device_id: str) -> SVSGroup | None:
+    """Return the subwoofer group a device stands for, or None if it is not one.
+
+    Also None for a group that is not set up.
+    """
+    device = dr.async_get(hass).async_get(device_id)
+    if not device:
+        return None
+    for domain, identifier in device.identifiers:
+        if domain == DOMAIN and identifier.startswith(GROUP_ID_PREFIX):
+            entry = hass.config_entries.async_get_entry(
+                identifier.removeprefix(GROUP_ID_PREFIX)
+            )
+            return getattr(entry, "runtime_data", None) if entry else None
+    return None
+
+
+def get_coordinators_for_device(
+    hass: HomeAssistant, device_id: str
+) -> list[SVSSubwooferCoordinator]:
+    """Return the subwoofers a device stands for: itself, or a group's members.
+
+    A group's members that are not set up are left out, with a warning.
+    """
+    if (group := get_group_for_device(hass, device_id)) is not None:
+        coordinators = group.coordinators()
+        for address in group.members:
+            if address not in coordinators:
+                _LOGGER.warning(
+                    "%s is not set up, skipping it", group.member_name(address)
+                )
+        return list(coordinators.values())
+    coordinator = get_coordinator_for_device(hass, device_id)
+    return [coordinator] if coordinator else []
