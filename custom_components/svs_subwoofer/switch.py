@@ -11,7 +11,7 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, UpdateFailed
 
 from . import SVSConfigEntry
 from .coordinator import SVSSubwooferCoordinator
@@ -81,7 +81,13 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
 
     async_add_entities(
-        SVSSwitchEntity(coordinator, description) for description in SWITCH_DESCRIPTIONS
+        [
+            *(
+                SVSSwitchEntity(coordinator, description)
+                for description in SWITCH_DESCRIPTIONS
+            ),
+            SVSConnectionSwitch(coordinator),
+        ]
     )
 
 
@@ -129,3 +135,47 @@ class SVSSwitchEntity(CoordinatorEntity[SVSSubwooferCoordinator], SwitchEntity):
             raise HomeAssistantError(
                 f"Failed to turn off {self.entity_description.key}"
             )
+
+
+class SVSConnectionSwitch(CoordinatorEntity[SVSSubwooferCoordinator], SwitchEntity):
+    """The Bluetooth connection as a switch.
+
+    On while connected. Turning it on connects (as the Reconnect button does)
+    and turning it off disconnects until the next command (as the Disconnect
+    button does), so a dashboard can toggle the connection with a tap.
+    """
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "connection"
+
+    def __init__(self, coordinator: SVSSubwooferCoordinator) -> None:
+        """Initialize the switch."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.address}_connection"
+        self._attr_device_info = coordinator.device_info
+
+    @property
+    def available(self) -> bool:
+        """Always available: it is how a disconnected subwoofer is reached."""
+        return True
+
+    @property
+    def is_on(self) -> bool:
+        """Return true while connected."""
+        return self.coordinator.is_connected
+
+    @property
+    def icon(self) -> str:
+        """Return the icon for the connection state."""
+        return "mdi:bluetooth-connect" if self.is_on else "mdi:bluetooth-off"
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Connect to the subwoofer."""
+        try:
+            await self.coordinator.async_reconnect()
+        except UpdateFailed as err:
+            raise HomeAssistantError(str(err)) from err
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Disconnect until the next command."""
+        await self.coordinator.async_disconnect(manual=True)
