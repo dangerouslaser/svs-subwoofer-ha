@@ -98,6 +98,13 @@ def preset_store(hass: HomeAssistant, address: str) -> Store[dict[str, Any]]:
     )
 
 
+# A preset name reply is sometimes lost. Names not received within this long
+# are asked for again, up to this many times (seconds, attempts).
+NAME_REPLY_WAIT = 1.0
+NAME_READ_ATTEMPTS = 3
+PRESET_NAME_PARAMS = ("PRESET1NAME", "PRESET2NAME", "PRESET3NAME")
+
+
 class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Coordinator for SVS Subwoofer BLE communication."""
 
@@ -197,6 +204,9 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "ACTIVE_PRESET": None,
         }
         self._device_id: str | None = None
+        # Preset names received since they were last asked for
+        self._names_read: set[str] = set()
+        self._names_task: asyncio.Task | None = None
 
     def _get_device_id(self) -> str | None:
         """Get the device ID from the device registry."""
@@ -663,6 +673,7 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if validated:
                 # Update our data store
                 self.data.update(validated)
+                self._names_read.update(p for p in validated if p in PRESET_NAME_PARAMS)
                 _LOGGER.debug("Updated data from %s: %s", self.address, validated)
                 self._update_device_versions(validated)
                 if any(param in validated for param in PRESET_PARAMS):
@@ -995,12 +1006,11 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         requests = [
             ("MEMREAD", "FULL_SETTINGS"),
-            ("MEMREAD", "PRESET1NAME"),
-            ("MEMREAD", "PRESET2NAME"),
-            ("MEMREAD", "PRESET3NAME"),
+            *(("MEMREAD", name) for name in PRESET_NAME_PARAMS),
         ]
         if versions:
             requests += [("SUB_INFO2", ""), ("SUB_INFO3", "")]
+        self._names_read.clear()
 
         for ftype, param in requests:
             frame, meta = svs_encode(ftype, param)
@@ -1011,6 +1021,32 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     await asyncio.sleep(COMMAND_DELAY)
                 except BleakError as err:
                     _LOGGER.warning("Failed to request %s: %s", param, err)
+        # Names are otherwise read only on connecting, so a lost reply would
+        # show as "Preset N" until the next connection
+        if not self._names_task or self._names_task.done():
+            self._names_task = self.hass.async_create_background_task(
+                self._async_reread_missing_names(), "svs_subwoofer preset names"
+            )
+
+    async def _async_reread_missing_names(self) -> None:
+        """Ask again for preset names the subwoofer has not sent."""
+        for _ in range(NAME_READ_ATTEMPTS):
+            await asyncio.sleep(NAME_REPLY_WAIT)
+            missing = [p for p in PRESET_NAME_PARAMS if p not in self._names_read]
+            if not missing:
+                return
+            async with self._command_lock:
+                if not self._client or not self._connected:
+                    return
+                for param in missing:
+                    frame, meta = svs_encode("MEMREAD", param)
+                    try:
+                        _LOGGER.debug("Requesting again: %s", meta)
+                        await self._client.write_gatt_char(SVS_CHAR_UUID, frame)
+                        await asyncio.sleep(COMMAND_DELAY)
+                    except BleakError as err:
+                        _LOGGER.debug("Failed to request %s again: %s", param, err)
+                        return
 
     def set_manual(self) -> None:
         """Put the sub in Manual until the next preset load.
@@ -1067,10 +1103,12 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._keep_alive_task,
                 self._quiet_keep_alive_task,
                 self._refresh_task,
+                self._names_task,
             )
             if task
         ]
-        self._keep_alive_task = self._quiet_keep_alive_task = self._refresh_task = None
+        self._keep_alive_task = self._quiet_keep_alive_task = None
+        self._refresh_task = self._names_task = None
         for task in tasks:
             task.cancel()
         if locked:
