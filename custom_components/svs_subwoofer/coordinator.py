@@ -11,7 +11,11 @@ from typing import Any
 from bleak import BleakClient
 from bleak.backends.characteristic import BleakGATTCharacteristic
 from bleak.exc import BleakError
-from bleak_retry_connector import BleakNotFoundError, establish_connection
+from bleak_retry_connector import (
+    BleakNotFoundError,
+    BleakOutOfConnectionSlotsError,
+    establish_connection,
+)
 from homeassistant.components.bluetooth import async_ble_device_from_address
 from homeassistant.const import CONF_DEVICE_ID, CONF_TYPE
 from homeassistant.core import HomeAssistant, callback
@@ -172,6 +176,9 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # the keep-alive loop may next reconnect automatically
         self._silent_attempts = 0
         self._retry_at = 0.0
+        # The last connection failed because Bluetooth had no free connection
+        # slot (a group can free one it opened for another member)
+        self.out_of_slots = False
 
         # The subwoofer cannot report which preset is active, so the settings
         # of each preset are recorded when HA loads or saves it, and the
@@ -197,6 +204,11 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "ACTIVE_PRESET": None,
         }
         self._device_id: str | None = None
+
+    @property
+    def device_id(self) -> str | None:
+        """Return the subwoofer's device ID in the device registry."""
+        return self._get_device_id()
 
     def _get_device_id(self) -> str | None:
         """Get the device ID from the device registry."""
@@ -583,6 +595,7 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             await self._async_release_client()
             raise UpdateFailed(f"Timeout connecting to {self.address}: {err}") from err
         except BleakError as err:
+            self.out_of_slots = isinstance(err, BleakOutOfConnectionSlotsError)
             await self._async_release_client()
             raise UpdateFailed(f"Failed to connect to {self.address}: {err}") from err
 

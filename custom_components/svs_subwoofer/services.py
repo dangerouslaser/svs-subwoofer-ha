@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
@@ -18,7 +19,14 @@ from .const import (
     VOLUME_MAX,
     VOLUME_MIN,
 )
-from .helpers import get_coordinator_for_device
+from .helpers import (
+    get_coordinator_for_device,
+    get_coordinators_for_device,
+    get_group_for_device,
+)
+
+if TYPE_CHECKING:
+    from .coordinator import SVSSubwooferCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,6 +72,11 @@ async def async_sync_from(hass: HomeAssistant, call: ServiceCall) -> None:
     source_device_id = call.data[ATTR_SOURCE_DEVICE_ID]
     target_device_ids = call.data[ATTR_TARGET_DEVICE_IDS]
 
+    # A group has no settings of its own to copy
+    if get_group_for_device(hass, source_device_id) is not None:
+        raise ServiceValidationError(
+            "The source must be a single subwoofer, not a subwoofer group"
+        )
     source_coord = get_coordinator_for_device(hass, source_device_id)
     if not source_coord:
         _LOGGER.error("Source device not found: %s", source_device_id)
@@ -75,12 +88,15 @@ async def async_sync_from(hass: HomeAssistant, call: ServiceCall) -> None:
         len(target_device_ids),
     )
 
+    # A group target stands for its members, other than the source
+    targets: list[SVSSubwooferCoordinator] = []
     for target_id in target_device_ids:
-        target_coord = get_coordinator_for_device(hass, target_id)
-        if not target_coord:
+        found = get_coordinators_for_device(hass, target_id)
+        if not found:
             _LOGGER.warning("Target device not found, skipping: %s", target_id)
-            continue
+        targets += [c for c in found if c is not source_coord and c not in targets]
 
+    for target_coord in targets:
         _LOGGER.debug(
             "Syncing %s -> %s", source_coord.device_name, target_coord.device_name
         )
@@ -112,15 +128,35 @@ async def async_set_volume(hass: HomeAssistant, call: ServiceCall) -> None:
         "Setting volume to %d dB on %d device(s)", base_volume, len(device_ids)
     )
 
+    # Each subwoofer's volume: a group stands for its members, at the group's
+    # own offsets (within the group's range) unless the call gives a member
+    # its own offset
+    volumes: dict[SVSSubwooferCoordinator, int] = {}
     for device_id in device_ids:
-        coord = get_coordinator_for_device(hass, device_id)
-        if not coord:
-            _LOGGER.warning("Device not found, skipping: %s", device_id)
+        group = get_group_for_device(hass, device_id)
+        if group is None:
+            coord = get_coordinator_for_device(hass, device_id)
+            if not coord:
+                _LOGGER.warning("Device not found, skipping: %s", device_id)
+                continue
+            volumes[coord] = base_volume + offsets.get(device_id, 0)
             continue
+        group_offsets = group.offsets.values()
+        group_volume = max(
+            VOLUME_MIN - min(group_offsets, default=0),
+            min(VOLUME_MAX - max(group_offsets, default=0), base_volume),
+        )
+        for coord in get_coordinators_for_device(hass, device_id):
+            member_id = coord.device_id
+            volumes[coord] = (
+                base_volume + offsets[member_id]
+                if member_id in offsets
+                else group_volume + group.offsets.get(coord.address, 0)
+            )
 
-        # Apply offset if specified for this device
-        offset = offsets.get(device_id, 0)
-        volume = max(VOLUME_MIN, min(VOLUME_MAX, base_volume + offset))
+    for coord, target in volumes.items():
+        offset = target - base_volume
+        volume = max(VOLUME_MIN, min(VOLUME_MAX, target))
 
         try:
             await coord.async_send_command("VOLUME", volume)
@@ -155,13 +191,16 @@ async def async_load_preset(hass: HomeAssistant, call: ServiceCall) -> None:
 
     _LOGGER.info("Loading preset %s on %d device(s)", preset_num, len(device_ids))
 
-    failed: list[str] = []
+    # A group stands for its members
+    coordinators: list[SVSSubwooferCoordinator] = []
     for device_id in device_ids:
-        coord = get_coordinator_for_device(hass, device_id)
-        if not coord:
+        found = get_coordinators_for_device(hass, device_id)
+        if not found:
             _LOGGER.warning("Device not found, skipping: %s", device_id)
-            continue
+        coordinators += [c for c in found if c not in coordinators]
 
+    failed: list[str] = []
+    for coord in coordinators:
         try:
             loaded = await coord.async_load_preset(preset_num)
         except Exception as err:

@@ -1,6 +1,7 @@
 {
   "domain": "svs_subwoofer",
   "name": "SVS Subwoofer",
+  "after_dependencies": ["frontend", "http", "lovelace"],
   "bluetooth": [
     {
       "service_uuid": "1fee6acf-a826-4e37-9635-4d8a01642c5d",
