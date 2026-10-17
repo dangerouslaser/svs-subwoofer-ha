@@ -43,8 +43,8 @@ ROOM_GAIN_FREQUENCIES: Final = [25, 31, 40]
 ROOM_GAIN_SLOPES: Final = [6, 12]
 
 # Standby modes
-STANDBY_MODES: Final = ["Auto ON", "Trigger", "ON"]
-STANDBY_MODE_MAP: Final = {"Auto ON": 0, "Trigger": 1, "ON": 2}
+STANDBY_MODES: Final = ["Auto On", "Trigger", "On"]
+STANDBY_MODE_MAP: Final = {"Auto On": 0, "Trigger": 1, "On": 2}
 
 # Presets
 PRESETS: Final = ["Preset 1", "Preset 2", "Preset 3", "Default"]

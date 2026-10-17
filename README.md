@@ -119,7 +119,7 @@ bluetoothctl
 | LPF Slope | Low pass filter slope | 6/12/18/24 dB |
 | Room Gain Frequency | Room gain corner frequency | 25/31/40 Hz |
 | Room Gain Slope | Room gain slope | 6/12 dB |
-| Standby Mode | Power mode | Auto ON/Trigger/ON |
+| Standby Mode | Power mode | Auto On/Trigger/On |
 | Preset | Load saved preset, and show the active one | 1/2/3/Default/Manual |
 
 #### How the active preset is detected
