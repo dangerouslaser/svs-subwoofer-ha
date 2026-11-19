@@ -559,6 +559,8 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         Caller must hold _command_lock.
         """
+        # Only the failure of this attempt may count as a lack of slots
+        self.out_of_slots = False
         if self._connected and self._client and self._client.is_connected:
             return
 
