@@ -8,7 +8,7 @@ Control your SVS subwoofer directly from Home Assistant via Bluetooth. Full para
 
 - Bluetooth auto-discovery of SVS subwoofers
 - Manual MAC address configuration option
-- Support for multiple subwoofers
+- Support for multiple subwoofers, and subwoofer groups that control several as one
 - Full parameter control:
   - Volume (-60 to 0 dB)
   - Phase (0-180 degrees)
@@ -298,7 +298,30 @@ automation:
 
 ## Multi-Subwoofer Control
 
-When you have multiple SVS subwoofers, you can control them together using custom services. These are available in **Developer Tools** → **Services**.
+When you have multiple SVS subwoofers, you can control them together with a subwoofer group, or with the actions below.
+
+### Subwoofer Groups
+
+A group is a device that controls several subwoofers as one. Once two subwoofers are added, go to **Settings** → **Devices & Services** → **SVS Subwoofer** → **Add entry** → **Create a subwoofer group**, then choose a name and the subwoofers.
+
+The group has three entities:
+
+| Entity | What it does |
+|--------|--------------|
+| Preset | Loads a preset on every subwoofer, **matched by name**: LOW loads from the slot named LOW on each subwoofer, whichever slot that is. Only presets that every subwoofer has are offered. |
+| Volume | Sets the same volume on every subwoofer |
+| Standby Mode | Sets the standby mode on every subwoofer |
+
+- A group entity shows a value only when every subwoofer agrees on it; otherwise it shows unknown, for example after one subwoofer's volume is changed on its own.
+- Commands go to the subwoofers one at a time. If one fails, the others are still set, and the error names the one that failed.
+- Each subwoofer keeps all of its own controls.
+- **Configure** on the group changes its subwoofers. A subwoofer that is deleted is taken out of its groups.
+- The group is unavailable while any of its subwoofers is not set up.
+- For different volumes per subwoofer, use the `set_volume` action's offsets. The actions and device automations take subwoofers, not groups.
+
+### Available Services
+
+These are available in **Developer Tools** → **Actions**.
 
 ### Available Services
 

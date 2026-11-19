@@ -16,7 +16,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import SVSConfigEntry
+from . import SVSConfigEntry, SVSGroupConfigEntry
 from .const import (
     LPF_FREQ_MAX,
     LPF_FREQ_MIN,
@@ -38,6 +38,8 @@ from .const import (
     VOLUME_STEP,
 )
 from .coordinator import SVSSubwooferCoordinator
+from .helpers import is_group_entry
+from .subwoofer_group import SVSGroup, SVSGroupEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -197,10 +199,14 @@ NUMBER_DESCRIPTIONS: tuple[SVSNumberEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: SVSConfigEntry,
+    entry: SVSConfigEntry | SVSGroupConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up SVS number entities."""
+    if is_group_entry(entry):
+        async_add_entities([SVSGroupVolume(entry.runtime_data)])
+        return
+
     coordinator = entry.runtime_data
 
     async_add_entities(
@@ -248,3 +254,37 @@ class SVSNumberEntity(CoordinatorEntity[SVSSubwooferCoordinator], NumberEntity):
             raise HomeAssistantError(
                 f"Failed to set {self.entity_description.key} to {value}"
             )
+
+
+class SVSGroupVolume(SVSGroupEntity, NumberEntity):
+    """Set the same volume on every subwoofer of a group.
+
+    The state is unknown while the subwoofers are at different volumes.
+    For different levels per subwoofer, use the set_volume action's offsets.
+    """
+
+    _attr_translation_key = "volume"
+    _attr_icon = "mdi:volume-high"
+    _attr_native_min_value = VOLUME_MIN
+    _attr_native_max_value = VOLUME_MAX
+    _attr_native_step = VOLUME_STEP
+    _attr_native_unit_of_measurement = "dB"
+    _attr_mode = NumberMode.SLIDER
+
+    def __init__(self, group: SVSGroup) -> None:
+        """Initialize the number."""
+        super().__init__(group, "volume")
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the volume every subwoofer is at, if they agree."""
+        value = self._group.agreed(lambda member: member.data.get("VOLUME"))
+        return None if value is None else float(value)
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Set the volume on every subwoofer."""
+        volume = int(value)
+        await self._group.async_apply(
+            f"set volume to {volume} dB",
+            lambda member: member.async_send_command("VOLUME", volume),
+        )

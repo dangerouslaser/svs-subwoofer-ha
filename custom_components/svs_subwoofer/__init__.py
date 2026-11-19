@@ -18,9 +18,11 @@ from homeassistant.const import (
 from homeassistant.core import Event, HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     CONF_DISCONNECT_AFTER,
+    CONF_MEMBERS,
     CONF_RECONNECT_INTERVAL,
     CONNECTION_CONSTANT,
     CONNECTION_PERIODIC,
@@ -28,10 +30,13 @@ from .const import (
     DEFAULT_DISCONNECT_AFTER,
     DEFAULT_RECONNECT_INTERVAL,
     DOMAIN,
+    SIGNAL_SUBWOOFERS_CHANGED,
     get_connection_mode,
 )
 from .coordinator import SVSSubwooferCoordinator, preset_store
+from .helpers import is_group_entry
 from .services import async_setup_services, async_unload_services
+from .subwoofer_group import SVSGroup
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,11 +48,20 @@ PLATFORMS: list[Platform] = [
     Platform.SWITCH,
 ]
 
+# A group only has the settings it controls together
+GROUP_PLATFORMS: list[Platform] = [Platform.NUMBER, Platform.SELECT]
+
 type SVSConfigEntry = ConfigEntry[SVSSubwooferCoordinator]
+type SVSGroupConfigEntry = ConfigEntry[SVSGroup]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SVSConfigEntry) -> bool:
-    """Set up SVS Subwoofer from a config entry."""
+async def async_setup_entry(
+    hass: HomeAssistant, entry: SVSConfigEntry | SVSGroupConfigEntry
+) -> bool:
+    """Set up a subwoofer or a subwoofer group from a config entry."""
+    if is_group_entry(entry):
+        return await _async_setup_group(hass, entry)
+
     address = entry.data[CONF_ADDRESS]
     name = entry.data.get(CONF_NAME, "SVS Subwoofer")
 
@@ -99,6 +113,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SVSConfigEntry) -> bool:
 
     # Set up platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    async_dispatcher_send(hass, SIGNAL_SUBWOOFERS_CHANGED)
 
     # Reload when options change so the connection mode takes effect
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
@@ -116,8 +131,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: SVSConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: SVSConfigEntry) -> bool:
+async def _async_setup_group(hass: HomeAssistant, entry: SVSGroupConfigEntry) -> bool:
+    """Set up a subwoofer group.
+
+    It does not wait for its subwoofers: its entities are unavailable until
+    every one of them is set up.
+    """
+    entry.runtime_data = SVSGroup(hass, entry)
+    await hass.config_entries.async_forward_entry_setups(entry, GROUP_PLATFORMS)
+    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+    return True
+
+
+async def async_unload_entry(
+    hass: HomeAssistant, entry: SVSConfigEntry | SVSGroupConfigEntry
+) -> bool:
     """Unload a config entry."""
+    if is_group_entry(entry):
+        return await hass.config_entries.async_unload_platforms(entry, GROUP_PLATFORMS)
+
     _LOGGER.debug("Unloading SVS Subwoofer: %s", entry.title)
 
     # Unload platforms
@@ -127,6 +159,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: SVSConfigEntry) -> bool
         # Disconnect from device
         coordinator: SVSSubwooferCoordinator = hass.data[DOMAIN].pop(entry.entry_id)
         await coordinator.async_shutdown()
+        async_dispatcher_send(hass, SIGNAL_SUBWOOFERS_CHANGED)
 
         # Unregister services when last device is removed
         if not hass.data[DOMAIN]:
@@ -136,8 +169,24 @@ async def async_unload_entry(hass: HomeAssistant, entry: SVSConfigEntry) -> bool
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Delete the recorded preset settings when the subwoofer is removed."""
+    """Clean up after a removed subwoofer.
+
+    Deletes its recorded preset settings, and takes it out of its groups.
+    """
+    if is_group_entry(entry):
+        return
+    address = entry.data[CONF_ADDRESS].upper()
     await preset_store(hass, entry.data[CONF_ADDRESS]).async_remove()
+    for group in hass.config_entries.async_entries(DOMAIN):
+        members = group.options.get(CONF_MEMBERS, [])
+        if is_group_entry(group) and address in (m.upper() for m in members):
+            hass.config_entries.async_update_entry(
+                group,
+                options={
+                    **group.options,
+                    CONF_MEMBERS: [m for m in members if m.upper() != address],
+                },
+            )
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:

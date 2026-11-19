@@ -3,6 +3,14 @@
     "step": {
       "user": {
         "title": "Add SVS Subwoofer",
+        "description": "Add another subwoofer, or group subwoofers to control them together.",
+        "menu_options": {
+          "subwoofer": "Add a subwoofer",
+          "group": "Create a subwoofer group"
+        }
+      },
+      "subwoofer": {
+        "title": "Add SVS Subwoofer",
         "description": "Select your subwoofer from the list below. Devices are shown by the name you set in the SVS app (e.g., RIGHTSUB, LEFTSUB). Devices marked [SVS] are detected SVS subwoofers.\n\nLeave the name blank to use the device's advertised name.",
         "data": {
           "address": "Device",
@@ -23,11 +31,20 @@
         "data": {
           "name": "Device Name"
         }
+      },
+      "group": {
+        "title": "Create a Subwoofer Group",
+        "description": "A group sets the preset, volume and standby mode on all of its subwoofers at once. Presets are matched by name, so a preset loads on each subwoofer from the slot with that name.",
+        "data": {
+          "name": "Name",
+          "members": "Subwoofers"
+        }
       }
     },
     "error": {
       "invalid_mac": "Invalid MAC address format",
-      "cannot_connect": "Failed to connect to device"
+      "cannot_connect": "Failed to connect to device",
+      "too_few_members": "Choose at least two subwoofers."
     },
     "abort": {
       "already_configured": "Device is already configured",
@@ -54,10 +71,18 @@
           "reconnect_interval": "While disconnected, how often Home Assistant briefly connects to refresh the subwoofer's settings, for example after a change made in the SVS app or on the rear panel. Each refresh briefly lights the panel LEDs. Must be longer than the connection hang-on time. Set to 0 to connect only when a command is sent.",
           "disconnect_after": "How long the connection remains active after the last command. A shorter time frees the subwoofer for the SVS app sooner."
         }
+      },
+      "group": {
+        "title": "Subwoofer Group",
+        "description": "Choose the subwoofers this group controls.",
+        "data": {
+          "members": "Subwoofers"
+        }
       }
     },
     "error": {
-      "refresh_within_hang_on": "The refresh interval must be longer than the connection hang-on time, or 0. A shorter one keeps the subwoofer connected almost all the time and lights its panel LEDs at every refresh."
+      "refresh_within_hang_on": "The refresh interval must be longer than the connection hang-on time, or 0. A shorter one keeps the subwoofer connected almost all the time and lights its panel LEDs at every refresh.",
+      "too_few_members": "Choose at least two subwoofers."
     }
   },
   "entity": {

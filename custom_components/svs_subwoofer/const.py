@@ -180,3 +180,13 @@ SYNCABLE_PARAMS: Final = [
 # system setting rather than part of the sound profile, so a standby change
 # must not make the preset look modified.
 PRESET_PARAMS: Final = [param for param in SYNCABLE_PARAMS if param != "STANDBY"]
+
+# Subwoofer groups: a config entry of their own that controls its member
+# subwoofers (by address) together
+CONF_ENTRY_TYPE: Final = "entry_type"
+ENTRY_TYPE_GROUP: Final = "group"
+CONF_MEMBERS: Final = "members"
+GROUP_MIN_MEMBERS: Final = 2
+# Sent when a subwoofer's coordinator is set up or unloaded, so groups can
+# follow their members
+SIGNAL_SUBWOOFERS_CHANGED: Final = f"{DOMAIN}_subwoofers_changed"
