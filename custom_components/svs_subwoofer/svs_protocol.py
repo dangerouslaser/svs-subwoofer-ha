@@ -379,7 +379,10 @@ def svs_decode(frame: bytes) -> dict[str, Any]:
 
                     if param_info.limits_type == 2:
                         # String value
-                        value = raw_bytes.decode("utf-8").rstrip("\x00")
+                        # A bad byte must not stop the frame from decoding
+                        value = raw_bytes.decode("utf-8", errors="replace").rstrip(
+                            "\x00"
+                        )
                     else:
                         # Numeric value
                         raw_int = int.from_bytes(raw_bytes, "little")
@@ -418,7 +421,7 @@ def svs_decode(frame: bytes) -> dict[str, Any]:
         if len(payload) >= 1 + sw_ver_len:
             result["VALIDATED_VALUES"]["SW_VERSION"] = payload[
                 1 : 1 + sw_ver_len
-            ].decode("utf-8")
+            ].decode("utf-8", errors="replace")
             result["ATTRIBUTES"].append("INFO2")
 
     elif frame_type == "SUB_INFO3_RESP" and len(payload) > 1:
@@ -426,7 +429,7 @@ def svs_decode(frame: bytes) -> dict[str, Any]:
         if len(payload) >= 1 + hw_ver_len:
             result["VALIDATED_VALUES"]["HW_VERSION"] = payload[
                 1 : 1 + hw_ver_len
-            ].decode("utf-8")
+            ].decode("utf-8", errors="replace")
             result["ATTRIBUTES"].append("INFO3")
 
     return result
