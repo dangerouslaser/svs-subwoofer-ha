@@ -543,6 +543,19 @@ Works with any SVS subwoofer that supports the official SVS app:
 - Ensure you're not connected via the SVS app
 - If commands stop working after the sub has been idle, choose the **Constant** or **Quiet** connection (see [Connection Options](#connection-options))
 
+## Development
+
+The tests run against a fake subwoofer that speaks the BLE protocol, so no hardware or Bluetooth adapter is needed. They need Python 3.14:
+
+```bash
+pip install -r requirements_test.txt
+python .github/scripts/component_requirements.py > component-requirements.txt
+pip install -r component-requirements.txt
+pytest
+```
+
+They run on every pull request. `requirements_test.txt` pins the Home Assistant version they test against.
+
 ## Credits
 
 Protocol reverse-engineering based on [pySVS by Logon84](https://github.com/logon84/pySVS).
