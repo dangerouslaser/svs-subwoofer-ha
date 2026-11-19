@@ -12,7 +12,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import SVSConfigEntry
+from . import SVSConfigEntry, SVSGroupConfigEntry
 from .const import (
     GROUP_FEATURE_PRESET,
     GROUP_FEATURE_STANDBY,
@@ -105,7 +105,7 @@ SELECT_DESCRIPTIONS: tuple[SVSSelectEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: SVSConfigEntry,
+    entry: SVSConfigEntry | SVSGroupConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up SVS select entities."""

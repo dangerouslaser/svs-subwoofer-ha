@@ -53,14 +53,17 @@ PLATFORMS: list[Platform] = [
 # A subwoofer group has no connection of its own, so it only has these
 GROUP_PLATFORMS: list[Platform] = [Platform.NUMBER, Platform.SELECT]
 
-type SVSConfigEntry = ConfigEntry[SVSSubwooferCoordinator | SVSGroup]
+type SVSConfigEntry = ConfigEntry[SVSSubwooferCoordinator]
+type SVSGroupConfigEntry = ConfigEntry[SVSGroup]
 
 
 def _is_group(entry: ConfigEntry) -> bool:
     return entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_GROUP
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SVSConfigEntry) -> bool:
+async def async_setup_entry(
+    hass: HomeAssistant, entry: SVSConfigEntry | SVSGroupConfigEntry
+) -> bool:
     """Set up SVS Subwoofer from a config entry."""
     if _is_group(entry):
         entry.runtime_data = SVSGroup(hass, entry)
@@ -139,7 +142,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: SVSConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: SVSConfigEntry) -> bool:
+async def async_unload_entry(
+    hass: HomeAssistant, entry: SVSConfigEntry | SVSGroupConfigEntry
+) -> bool:
     """Unload a config entry."""
     _LOGGER.debug("Unloading SVS Subwoofer: %s", entry.title)
 
