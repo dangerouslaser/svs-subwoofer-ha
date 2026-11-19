@@ -604,6 +604,10 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # The first answer marks the sub as connected; see
         # _notification_handler.
         await self._request_full_settings(versions=True)
+        if not self._connected:
+            raise UpdateFailed(
+                f"Lost the connection to {self.address} while reading its settings"
+            )
 
     async def _async_release_client(self) -> None:
         """Disconnect and forget the BLE client without publishing state.
@@ -1013,11 +1017,16 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._names_read.clear()
 
         for ftype, param in requests:
+            # The sub can drop the link part-way through, which clears the
+            # client; asking the rest of it would only fail
+            client = self._client
+            if not client or not self._connected:
+                return
             frame, meta = svs_encode(ftype, param)
             if frame:
                 try:
                     _LOGGER.debug("Requesting: %s", meta)
-                    await self._client.write_gatt_char(SVS_CHAR_UUID, frame)
+                    await client.write_gatt_char(SVS_CHAR_UUID, frame)
                     await asyncio.sleep(COMMAND_DELAY)
                 except BleakError as err:
                     _LOGGER.warning("Failed to request %s: %s", param, err)
@@ -1039,10 +1048,13 @@ class SVSSubwooferCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if not self._client or not self._connected:
                     return
                 for param in missing:
+                    client = self._client
+                    if not client or not self._connected:
+                        return
                     frame, meta = svs_encode("MEMREAD", param)
                     try:
                         _LOGGER.debug("Requesting again: %s", meta)
-                        await self._client.write_gatt_char(SVS_CHAR_UUID, frame)
+                        await client.write_gatt_char(SVS_CHAR_UUID, frame)
                         await asyncio.sleep(COMMAND_DELAY)
                     except BleakError as err:
                         _LOGGER.debug("Failed to request %s again: %s", param, err)

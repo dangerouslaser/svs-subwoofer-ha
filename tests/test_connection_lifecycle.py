@@ -5,8 +5,10 @@ from __future__ import annotations
 import time
 from unittest.mock import patch
 
+import pytest
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from custom_components.svs_subwoofer import coordinator as coordinator_module
 
@@ -73,3 +75,26 @@ async def test_command_bypasses_the_backoff(
         await settle()
     assert sub.settings["VOLUME"] == -30
     assert hass.states.get(entity_id(hass, "binary_sensor", "connected")).state == "on"
+
+
+async def test_link_lost_while_reading_settings_fails_the_connect(
+    hass: HomeAssistant, sub: FakeSubwoofer, setup_entry: SetupEntry
+) -> None:
+    """A sub that drops the link mid-read fails the connect cleanly.
+
+    The rest of the read is not sent to a client that is gone, and the next
+    attempt connects again.
+    """
+    entry = await setup_entry()
+    coordinator = entry.runtime_data
+    # The settings read, the first name, then the link drops on the second
+    sub.drop_after_writes = 3
+    frames_before = len(sub.received)
+    with pytest.raises(UpdateFailed, match="while reading its settings"):
+        await coordinator.async_reconnect()
+    assert len(sub.received) - frames_before == 2
+    assert not coordinator.is_connected
+
+    await coordinator.async_reconnect()
+    await settle()
+    assert coordinator.is_connected
