@@ -165,7 +165,9 @@ class SVSGroup:
             coordinator.address,
         )
         while opened:
-            await opened.pop().async_disconnect()
+            # As a manual disconnect, so keep-alive does not take the slot
+            # straight back; the member reconnects on its next command
+            await opened.pop().async_disconnect(manual=True)
         return await command(address, coordinator)
 
     def matched_presets(self) -> dict[str, dict[str, int]]:
