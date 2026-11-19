@@ -2,7 +2,9 @@
 
 A group is a config entry of its own, listing its member subwoofers by
 Bluetooth address. Its entities show a setting when every member agrees on
-it, and set it on every member, one subwoofer at a time.
+it, and set it on every member, one subwoofer at a time. A group stays usable
+while some of its members are unplugged or not answering; a command names the
+members it could not reach.
 
 (Not named group.py: Home Assistant takes a group.py in an integration as
 support for its own Group integration.)
@@ -14,6 +16,7 @@ from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_ADDRESS
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -56,11 +59,21 @@ class SVSGroup:
 
     @property
     def available(self) -> bool:
-        """Return True when every member is set up and reachable."""
-        members = self.members
-        return len(members) == len(self.addresses) and all(
-            member.last_update_success for member in members
-        )
+        """Return True while any member is set up and reachable."""
+        return any(member.last_update_success for member in self.members)
+
+    def _missing_names(self) -> list[str]:
+        """Return the names of the members that are not set up."""
+        set_up = {member.address.upper() for member in self.members}
+        titles = {
+            str(entry.data.get(CONF_ADDRESS, "")).upper(): entry.title
+            for entry in self.hass.config_entries.async_entries(DOMAIN)
+        }
+        return [
+            titles.get(address, address)
+            for address in self.addresses
+            if address not in set_up
+        ]
 
     def agreed(self, value: Callable[[SVSSubwooferCoordinator], Any]) -> Any | None:
         """Return the value every member has, or None if they differ."""
@@ -78,9 +91,9 @@ class SVSGroup:
 
         One at a time, so a Bluetooth adapter or proxy is not asked for
         several connections at once. Every member is tried even if one
-        fails; the error names the members that failed.
+        fails; the error names the members that failed or are not set up.
         """
-        failed = []
+        failed = self._missing_names()
         for member in self.members:
             try:
                 ok = await command(member)
@@ -107,7 +120,7 @@ class SVSGroupEntity(Entity):
 
     @property
     def available(self) -> bool:
-        """Return True when every member is set up and reachable."""
+        """Return True while any member is set up and reachable."""
         return self._group.available
 
     async def async_added_to_hass(self) -> None:

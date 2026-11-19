@@ -316,14 +316,12 @@ The group has three entities:
 - Commands go to the subwoofers one at a time. If one fails, the others are still set, and the error names the one that failed.
 - Each subwoofer keeps all of its own controls.
 - **Configure** on the group changes its subwoofers. A subwoofer that is deleted is taken out of its groups.
-- The group is unavailable while any of its subwoofers is not set up.
+- The group keeps working while some of its subwoofers are unplugged or not answering: commands go to the others, and the error names the ones missed. It is unavailable only when none of them can be reached.
 - For different volumes per subwoofer, use the `set_volume` action's offsets. The actions and device automations take subwoofers, not groups.
 
 ### Available Services
 
 These are available in **Developer Tools** → **Actions**.
-
-### Available Services
 
 | Service | Description |
 |---------|-------------|

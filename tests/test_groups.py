@@ -7,7 +7,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_NAME, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -154,19 +154,30 @@ async def test_failed_member_is_named_and_the_others_still_change(
 async def test_group_follows_members_being_unloaded_and_removed(
     hass: HomeAssistant, subs: tuple[FakeSubwoofer, FakeSubwoofer]
 ) -> None:
-    """A group is unavailable without all its subwoofers, and drops removed ones."""
+    """A group keeps working with the subwoofers it has, and drops removed ones."""
+    left, _ = subs
     entry = await _add_group(hass)
     volume = _group_entity(hass, entry, "number", "volume")
-    right_entry = hass.config_entries.async_entries(DOMAIN)[1]
+    left_entry, right_entry = hass.config_entries.async_entries(DOMAIN)[:2]
     assert right_entry.title == "Right"
 
+    # Without Right, the group still sets Left, and names Right as missed
     await hass.config_entries.async_unload(right_entry.entry_id)
+    await settle()
+    assert _state(hass, volume) == "-15.0"
+    with pytest.raises(HomeAssistantError, match="on Right$"):
+        await _call(hass, "number", "set_value", {"entity_id": volume, "value": -8})
+    assert left.settings["VOLUME"] == -8
+
+    # Without either, it is unavailable
+    await hass.config_entries.async_unload(left_entry.entry_id)
     await settle()
     assert _state(hass, volume) == STATE_UNAVAILABLE
 
+    await hass.config_entries.async_setup(left_entry.entry_id)
     await hass.config_entries.async_setup(right_entry.entry_id)
     await settle()
-    assert _state(hass, volume) == "-15.0"
+    assert _state(hass, volume) == STATE_UNKNOWN  # Left -8, Right -15
 
     await hass.config_entries.async_remove(right_entry.entry_id)
     await settle()
@@ -183,6 +194,51 @@ async def test_group_device_has_no_device_automations(
     assert device_id
     assert await device_trigger.async_get_triggers(hass, device_id) == []
     assert await device_action.async_get_actions(hass, device_id) == []
+
+
+@pytest.mark.parametrize(
+    ("service", "data"),
+    [
+        ("set_volume", {"volume": -10}),
+        ("load_preset", {"preset": 1}),
+    ],
+)
+async def test_actions_refuse_a_group(
+    hass: HomeAssistant,
+    subs: tuple[FakeSubwoofer, FakeSubwoofer],
+    service: str,
+    data: dict,
+) -> None:
+    """The multi-subwoofer actions refuse a group's device, not skip it."""
+    left, _ = subs
+    entry = await _add_group(hass)
+    group_device = (
+        er.async_get(hass)
+        .async_get(_group_entity(hass, entry, "number", "volume"))
+        .device_id
+    )
+    left_device = (
+        er.async_get(hass)
+        .async_get(
+            er.async_get(hass).async_get_entity_id(
+                "number", DOMAIN, f"{ADDRESS}_volume"
+            )
+        )
+        .device_id
+    )
+    with pytest.raises(ServiceValidationError, match="not a subwoofer group"):
+        await _call(
+            hass, DOMAIN, service, {"device_ids": [left_device, group_device], **data}
+        )
+    assert left.settings["VOLUME"] == -15  # Nothing was sent
+
+    with pytest.raises(ServiceValidationError, match="not a subwoofer group"):
+        await _call(
+            hass,
+            DOMAIN,
+            "sync_from",
+            {"source_device_id": left_device, "target_device_ids": [group_device]},
+        )
 
 
 async def test_create_group_from_the_menu(
