@@ -7,7 +7,7 @@
       "connectable": true
     }
   ],
-  "codeowners": [],
+  "codeowners": ["@dangerouslaser"],
   "config_flow": true,
   "dependencies": ["bluetooth"],
   "documentation": "https://github.com/dangerouslaser/svs-subwoofer-ha",
