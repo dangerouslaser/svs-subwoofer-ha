@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -226,6 +226,13 @@ class SVSSelectEntity(CoordinatorEntity[SVSSubwooferCoordinator], SelectEntity):
             )
 
 
+# Mixed is listed so the select can show it, but it is a state, not a setting
+MIXED_NOT_SELECTABLE = (
+    f"{GROUP_STATE_MIXED} only shows that the subwoofers differ; "
+    "choose a setting instead"
+)
+
+
 class SVSGroupPresetSelect(SVSGroupEntity, SelectEntity):
     """A group's preset: the presets every member has, matched by name."""
 
@@ -257,8 +264,7 @@ class SVSGroupPresetSelect(SVSGroupEntity, SelectEntity):
     async def async_select_option(self, option: str) -> None:
         """Load the preset with this name on every member."""
         if option == GROUP_STATE_MIXED:
-            # Mixed is a state, not something that can be loaded
-            return
+            raise ServiceValidationError(MIXED_NOT_SELECTABLE)
         coordinators = self.svs_group.coordinators()
         if option == PRESET_MANUAL_OPTION:
             for coordinator in coordinators.values():
@@ -303,7 +309,7 @@ class SVSGroupStandbySelect(SVSGroupEntity, SelectEntity):
     async def async_select_option(self, option: str) -> None:
         """Set the standby mode on every member."""
         if option == GROUP_STATE_MIXED:
-            return
+            raise ServiceValidationError(MIXED_NOT_SELECTABLE)
         value = STANDBY_MODE_MAP[option]
         await self.svs_group.async_command_members(
             lambda address, coordinator: coordinator.async_send_command(

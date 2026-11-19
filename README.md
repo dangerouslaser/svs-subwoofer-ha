@@ -315,8 +315,8 @@ To change a group later, select **Configure** on its entry. To rename it, use Ho
 
 | Entity | Behavior |
 |--------|----------|
-| Preset | Lists the presets every subwoofer in the group has, matched by **name**, not by slot: a preset named LOW in one subwoofer's slot 1 matches LOW in another's slot 3. Selecting it loads each subwoofer's own LOW. Presets that not every subwoofer has are left out. An unnamed slot (shown as "Preset 2") matches only the same unnamed slot on the other subwoofers. A preset named Mixed is shown with its slot, as "Mixed (Preset 1)", so it is not mistaken for the group's Mixed state. Shows **Manual** when every subwoofer is in Manual, and **Mixed** when the subwoofers differ. |
-| Standby Mode | Sets every subwoofer to the same mode. Shows **Mixed** when the subwoofers differ. |
+| Preset | Lists the presets every subwoofer in the group has, matched by **name**, not by slot: a preset named LOW in one subwoofer's slot 1 matches LOW in another's slot 3. Selecting it loads each subwoofer's own LOW. Presets that not every subwoofer has are left out. An unnamed slot (shown as "Preset 2") matches only the same unnamed slot on the other subwoofers. A preset named Mixed is shown with its slot, as "Mixed (Preset 1)", so it is not mistaken for the group's Mixed state. Shows **Manual** when every subwoofer is in Manual, and **Mixed** when the subwoofers differ; choosing Mixed is refused with an error. |
+| Standby Mode | Sets every subwoofer to the same mode. Shows **Mixed** when the subwoofers differ; choosing Mixed is refused with an error. |
 | Volume | Moves the volume of every subwoofer in the group. |
 
 Changing one subwoofer on its own never changes the group or the other subwoofers.
