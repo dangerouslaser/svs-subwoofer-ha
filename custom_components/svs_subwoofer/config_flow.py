@@ -17,7 +17,7 @@ from homeassistant.config_entries import (
     OptionsFlow,
 )
 from homeassistant.const import CONF_ADDRESS, CONF_NAME
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import format_mac
 from homeassistant.helpers.selector import (
     NumberSelector,
@@ -32,15 +32,20 @@ from homeassistant.helpers.selector import (
 from .const import (
     CONF_CONNECTION_MODE,
     CONF_DISCONNECT_AFTER,
+    CONF_ENTRY_TYPE,
+    CONF_MEMBERS,
     CONF_RECONNECT_INTERVAL,
     CONNECTION_MODES,
     CONNECTION_PERIODIC,
     DEFAULT_DISCONNECT_AFTER,
     DEFAULT_RECONNECT_INTERVAL,
     DOMAIN,
+    ENTRY_TYPE_GROUP,
+    GROUP_MIN_MEMBERS,
     SVS_SERVICE_UUID,
     get_connection_mode,
 )
+from .helpers import is_group_entry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -62,6 +67,8 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         """Return the options flow."""
+        if is_group_entry(config_entry):
+            return SVSGroupOptionsFlow()
         return SVSSubwooferOptionsFlow()
 
     async def async_step_bluetooth(
@@ -121,7 +128,17 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Handle user-initiated configuration.
+        """Add a subwoofer, or a group once there are subwoofers to group."""
+        if len(_subwoofer_entries(self.hass)) >= GROUP_MIN_MEMBERS:
+            return self.async_show_menu(
+                step_id="user", menu_options=["subwoofer", "group"]
+            )
+        return await self.async_step_subwoofer()
+
+    async def async_step_subwoofer(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Add a subwoofer.
 
         Shows discovered devices or allows manual MAC entry.
         """
@@ -217,7 +234,7 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
             addresses["manual"] = "Enter MAC address manually..."
 
             return self.async_show_form(
-                step_id="user",
+                step_id="subwoofer",
                 data_schema=vol.Schema(
                     {
                         vol.Required(CONF_ADDRESS): vol.In(addresses),
@@ -232,6 +249,32 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
 
         # No devices found - go straight to manual entry
         return await self.async_step_manual()
+
+    async def async_step_group(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Create a group of subwoofers to control together."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            if len(user_input[CONF_MEMBERS]) < GROUP_MIN_MEMBERS:
+                errors[CONF_MEMBERS] = "too_few_members"
+            else:
+                return self.async_create_entry(
+                    title=user_input[CONF_NAME],
+                    data={CONF_ENTRY_TYPE: ENTRY_TYPE_GROUP},
+                    options={CONF_MEMBERS: user_input[CONF_MEMBERS]},
+                )
+
+        return self.async_show_form(
+            step_id="group",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_NAME, default="Subwoofers"): str,
+                    vol.Required(CONF_MEMBERS): _members_selector(self.hass),
+                }
+            ),
+            errors=errors,
+        )
 
     async def async_step_manual(
         self, user_input: dict[str, Any] | None = None
@@ -272,6 +315,29 @@ class SVSSubwooferConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
             description_placeholders={"mac_format": "AA:BB:CC:DD:EE:FF"},
         )
+
+
+def _subwoofer_entries(hass: HomeAssistant) -> list[ConfigEntry]:
+    """Return the config entries of the subwoofers (not the groups)."""
+    return [
+        entry
+        for entry in hass.config_entries.async_entries(DOMAIN)
+        if not is_group_entry(entry)
+    ]
+
+
+def _members_selector(hass: HomeAssistant) -> SelectSelector:
+    """Return a picker of the subwoofers, by name."""
+    return SelectSelector(
+        SelectSelectorConfig(
+            options=[
+                SelectOptionDict(value=entry.data[CONF_ADDRESS], label=entry.title)
+                for entry in _subwoofer_entries(hass)
+            ],
+            multiple=True,
+            mode=SelectSelectorMode.LIST,
+        )
+    )
 
 
 def _duration_selector(minimum: int, maximum: int, step: int) -> NumberSelector:
@@ -384,6 +450,45 @@ class SVSSubwooferOptionsFlow(OptionsFlow):
                             )
                         },
                     ): _duration_selector(10, 600, 10),
+                }
+            ),
+            errors=errors,
+        )
+
+
+class SVSGroupOptionsFlow(OptionsFlow):
+    """Change which subwoofers a group controls."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Start with the members form.
+
+        It has a step of its own, since a subwoofer's options use init.
+        """
+        return await self.async_step_group()
+
+    async def async_step_group(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Choose the group's subwoofers."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            if len(user_input[CONF_MEMBERS]) < GROUP_MIN_MEMBERS:
+                errors[CONF_MEMBERS] = "too_few_members"
+            else:
+                return self.async_create_entry(
+                    data={CONF_MEMBERS: user_input[CONF_MEMBERS]}
+                )
+
+        return self.async_show_form(
+            step_id="group",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_MEMBERS,
+                        default=self.config_entry.options.get(CONF_MEMBERS, []),
+                    ): _members_selector(self.hass),
                 }
             ),
             errors=errors,

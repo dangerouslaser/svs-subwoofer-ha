@@ -22,6 +22,7 @@ from .const import (
     TRIGGER_TYPE_PRESET_LOADED,
     TRIGGER_TYPES,
 )
+from .helpers import is_group_device
 
 CONF_SUBTYPE = "subtype"
 
@@ -46,8 +47,10 @@ async def async_get_triggers(
     if not device:
         return []
 
-    # Check if this device belongs to our domain
+    # Check if this device belongs to our domain, and is not a group
     if not any(identifier[0] == DOMAIN for identifier in device.identifiers):
+        return []
+    if is_group_device(hass, device_id):
         return []
 
     triggers = []

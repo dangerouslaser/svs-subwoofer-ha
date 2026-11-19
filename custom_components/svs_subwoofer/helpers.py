@@ -6,10 +6,17 @@ import logging
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 
-from .const import DOMAIN, PRESET_MANUAL_OPTION
+from .const import (
+    CONF_ENTRY_TYPE,
+    DOMAIN,
+    ENTRY_TYPE_GROUP,
+    PRESET_MANUAL,
+    PRESET_MANUAL_OPTION,
+)
 
 if TYPE_CHECKING:
     from .coordinator import SVSSubwooferCoordinator
@@ -40,6 +47,35 @@ def preset_option_names(data: Mapping[str, Any]) -> list[str]:
         names.append(name)
     names.append("Default")
     return names
+
+
+def is_group_entry(entry: ConfigEntry) -> bool:
+    """Return True for a subwoofer group's config entry."""
+    return entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_GROUP
+
+
+def is_group_device(hass: HomeAssistant, device_id: str) -> bool:
+    """Return True for a subwoofer group's device."""
+    device = dr.async_get(hass).async_get(device_id)
+    return bool(device) and any(
+        domain == DOMAIN and identifier.startswith("group_")
+        for domain, identifier in device.identifiers
+    )
+
+
+def current_preset_option(data: Mapping[str, Any]) -> str | None:
+    """Return the Preset select's option for the active preset.
+
+    None while the active preset is not known yet.
+    """
+    active = data.get("ACTIVE_PRESET")
+    if active is None:
+        return None
+    if active == PRESET_MANUAL:
+        return PRESET_MANUAL_OPTION
+    if not 1 <= active <= 4:
+        return None
+    return preset_option_names(data)[active - 1]
 
 
 def get_coordinator_for_device(

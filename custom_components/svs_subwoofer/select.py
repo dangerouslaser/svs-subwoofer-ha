@@ -8,14 +8,13 @@ from dataclasses import dataclass
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import SVSConfigEntry
+from . import SVSConfigEntry, SVSGroupConfigEntry
 from .const import (
     LPF_SLOPES,
-    PRESET_MANUAL,
     PRESET_MANUAL_OPTION,
     PRESET_MAP,
     PRESETS,
@@ -25,7 +24,8 @@ from .const import (
     STANDBY_MODES,
 )
 from .coordinator import SVSSubwooferCoordinator
-from .helpers import preset_option_names
+from .helpers import current_preset_option, is_group_entry, preset_option_names
+from .subwoofer_group import SVSGroup, SVSGroupEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -101,10 +101,15 @@ SELECT_DESCRIPTIONS: tuple[SVSSelectEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: SVSConfigEntry,
+    entry: SVSConfigEntry | SVSGroupConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up SVS select entities."""
+    if is_group_entry(entry):
+        group: SVSGroup = entry.runtime_data
+        async_add_entities([SVSGroupPresetSelect(group), SVSGroupStandbySelect(group)])
+        return
+
     coordinator = entry.runtime_data
 
     async_add_entities(
@@ -162,17 +167,7 @@ class SVSSelectEntity(CoordinatorEntity[SVSSubwooferCoordinator], SelectEntity):
     def current_option(self) -> str | None:
         """Return current option."""
         if self.entity_description.is_preset:
-            active = self.coordinator.data.get("ACTIVE_PRESET")
-            if active is None:
-                return None
-            if active == PRESET_MANUAL:
-                return PRESET_MANUAL_OPTION
-            # Map preset number to current option name (0-indexed into options list)
-            current_options = self.options
-            idx = active - 1 if active <= 3 else 3  # preset 4 = Default = index 3
-            if 0 <= idx < len(current_options):
-                return current_options[idx]
-            return None
+            return current_preset_option(self.coordinator.data)
 
         value = self.coordinator.data.get(self.entity_description.svs_param)
         if value is None:
@@ -210,3 +205,90 @@ class SVSSelectEntity(CoordinatorEntity[SVSSubwooferCoordinator], SelectEntity):
             raise HomeAssistantError(
                 f"Failed to set {self.entity_description.key} to {option}"
             )
+
+
+class SVSGroupPresetSelect(SVSGroupEntity, SelectEntity):
+    """Load a preset on every subwoofer of a group, matched by name.
+
+    A preset loads the slot with that name on each subwoofer, so LOW in one
+    subwoofer's slot 1 loads LOW from another's slot 3. Only the presets that
+    every subwoofer has are offered. The state is unknown while the
+    subwoofers are not all on the same preset.
+    """
+
+    _attr_translation_key = "preset"
+    _attr_icon = "mdi:playlist-music"
+
+    def __init__(self, group: SVSGroup) -> None:
+        """Initialize the select."""
+        super().__init__(group, "preset")
+
+    @property
+    def options(self) -> list[str]:
+        """Return the presets that every subwoofer has, then Manual."""
+        members = self._group.members
+        if not members:
+            return [PRESET_MANUAL_OPTION]
+        common = preset_option_names(members[0].data)
+        for member in members[1:]:
+            names = {name.casefold() for name in preset_option_names(member.data)}
+            common = [name for name in common if name.casefold() in names]
+        return [*common, PRESET_MANUAL_OPTION]
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the preset every subwoofer is on, if they agree."""
+        agreed = self._group.agreed(
+            lambda member: (current_preset_option(member.data) or "").casefold()
+        )
+        if not agreed:
+            return None
+        return next((o for o in self.options if o.casefold() == agreed), None)
+
+    async def async_select_option(self, option: str) -> None:
+        """Load the preset with this name on every subwoofer."""
+        if option == PRESET_MANUAL_OPTION:
+            for member in self._group.members:
+                member.set_manual()
+            return
+        if option not in self.options:
+            raise ServiceValidationError(
+                f"Not every subwoofer in the group has a preset named {option}"
+            )
+
+        async def load(member: SVSSubwooferCoordinator) -> bool:
+            names = [n.casefold() for n in preset_option_names(member.data)]
+            return await member.async_load_preset(names.index(option.casefold()) + 1)
+
+        await self._group.async_apply(f"load preset {option}", load)
+
+
+class SVSGroupStandbySelect(SVSGroupEntity, SelectEntity):
+    """Set the standby mode on every subwoofer of a group.
+
+    The state is unknown while the subwoofers are in different modes.
+    """
+
+    _attr_translation_key = "standby_mode"
+    _attr_icon = "mdi:power-standby"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_options = STANDBY_MODES
+
+    def __init__(self, group: SVSGroup) -> None:
+        """Initialize the select."""
+        super().__init__(group, "standby_mode")
+        self._reverse_map = {v: k for k, v in STANDBY_MODE_MAP.items()}
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the standby mode every subwoofer is in, if they agree."""
+        value = self._group.agreed(lambda member: member.data.get("STANDBY"))
+        return None if value is None else self._reverse_map.get(int(value))
+
+    async def async_select_option(self, option: str) -> None:
+        """Set the standby mode on every subwoofer."""
+        value = STANDBY_MODE_MAP[option]
+        await self._group.async_apply(
+            f"set standby mode {option}",
+            lambda member: member.async_send_command("STANDBY", value),
+        )

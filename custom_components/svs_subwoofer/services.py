@@ -6,7 +6,7 @@ import logging
 
 import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
@@ -18,7 +18,7 @@ from .const import (
     VOLUME_MAX,
     VOLUME_MIN,
 )
-from .helpers import get_coordinator_for_device
+from .helpers import get_coordinator_for_device, is_group_device
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,10 +59,21 @@ SERVICE_LOAD_PRESET_SCHEMA = vol.Schema(
 )
 
 
+def _refuse_groups(hass: HomeAssistant, device_ids: list[str]) -> None:
+    """Raise if any device is a subwoofer group.
+
+    The device picker cannot leave groups out, and a group has no settings
+    of its own to copy or set; its entities control its members.
+    """
+    if any(is_group_device(hass, device_id) for device_id in device_ids):
+        raise ServiceValidationError("Choose subwoofers, not a subwoofer group")
+
+
 async def async_sync_from(hass: HomeAssistant, call: ServiceCall) -> None:
     """Copy all settings from source subwoofer to target subwoofer(s)."""
     source_device_id = call.data[ATTR_SOURCE_DEVICE_ID]
     target_device_ids = call.data[ATTR_TARGET_DEVICE_IDS]
+    _refuse_groups(hass, [source_device_id, *target_device_ids])
 
     source_coord = get_coordinator_for_device(hass, source_device_id)
     if not source_coord:
@@ -107,6 +118,7 @@ async def async_set_volume(hass: HomeAssistant, call: ServiceCall) -> None:
     device_ids = call.data[ATTR_DEVICE_IDS]
     base_volume = call.data[ATTR_VOLUME]
     offsets = call.data.get(ATTR_OFFSETS, {})
+    _refuse_groups(hass, device_ids)
 
     _LOGGER.info(
         "Setting volume to %d dB on %d device(s)", base_volume, len(device_ids)
@@ -139,6 +151,7 @@ async def async_load_preset(hass: HomeAssistant, call: ServiceCall) -> None:
     """Load preset on multiple subwoofers."""
     device_ids = call.data[ATTR_DEVICE_IDS]
     preset = call.data[ATTR_PRESET]
+    _refuse_groups(hass, device_ids)
 
     # Map preset name/string to number
     preset_map = {

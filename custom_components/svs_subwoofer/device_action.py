@@ -24,7 +24,7 @@ from .const import (
     VOLUME_MAX,
     VOLUME_MIN,
 )
-from .helpers import get_coordinator_for_device
+from .helpers import get_coordinator_for_device, is_group_device
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,8 +49,10 @@ async def async_get_actions(
     if not device:
         return []
 
-    # Check if this device belongs to our domain
+    # Check if this device belongs to our domain, and is not a group
     if not any(identifier[0] == DOMAIN for identifier in device.identifiers):
+        return []
+    if is_group_device(hass, device_id):
         return []
 
     actions = []

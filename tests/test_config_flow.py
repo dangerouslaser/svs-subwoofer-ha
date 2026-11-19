@@ -57,8 +57,9 @@ async def test_user_flow_picks_discovered_subwoofer(hass: HomeAssistant) -> None
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
         assert result["type"] is FlowResultType.FORM
-        # With groups, the form moves to its own step behind the menu
-        assert result["step_id"] == "user"
+        # With fewer than two subwoofers there is nothing to group, so the
+        # user step goes straight to the subwoofer form
+        assert result["step_id"] == "subwoofer"
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {CONF_ADDRESS: ADDRESS, CONF_NAME: ""}
         )
