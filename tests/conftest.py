@@ -139,6 +139,8 @@ class FakeSubwoofer:
       link is open (as discovering its services does)
     - fail_loads=N fails the next N preset load writes, as a lost link would
     - fail_writes=N fails the next N setting writes, as a lost link would
+    - drop_after_writes=N drops the link on the Nth write from now, failing
+      that write, as a sub that goes away part-way through a read does
     - late_replies=S delivers a read's reply after its first fragment S seconds
       late, as a slow link does (the probe before a command can then still be
       answering when the command goes out)
@@ -165,6 +167,7 @@ class FakeSubwoofer:
         self.connect_delay = 0.0
         self.fail_loads = 0
         self.fail_writes = 0
+        self.drop_after_writes = 0
         self.late_replies = 0.0
         self.client: FakeBleakClient | None = None
         self.connects = 0
@@ -281,6 +284,11 @@ class FakeBleakClient:
         if not self.is_connected:
             raise BleakError("Not connected")
         frame = bytes(data)
+        if self.sub.drop_after_writes:
+            self.sub.drop_after_writes -= 1
+            if not self.sub.drop_after_writes:
+                await self.disconnect()
+                raise BleakError("GATT Protocol Error: Unlikely Error")
         if (
             self.sub.fail_loads
             and frame[1:3] == b"\x07\x04"
