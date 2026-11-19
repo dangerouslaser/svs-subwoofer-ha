@@ -2,6 +2,7 @@ name: Tests
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
@@ -11,14 +12,17 @@ jobs:
   tests:
     name: Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements_test.txt
       - name: Install test dependencies
         run: |
-          pip install pytest-homeassistant-custom-component
+          pip install -r requirements_test.txt
           python .github/scripts/component_requirements.py > component-requirements.txt
           cat component-requirements.txt
           pip install -r component-requirements.txt
