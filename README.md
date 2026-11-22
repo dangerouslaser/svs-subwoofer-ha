@@ -1,6 +1,6 @@
 # SVS Subwoofer Integration for Home Assistant
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 
 Control your SVS subwoofer directly from Home Assistant via Bluetooth. Full parameter access using the same protocol as the official SVS app.
 
@@ -32,12 +32,11 @@ Control your SVS subwoofer directly from Home Assistant via Bluetooth. Full para
 
 ### HACS (Recommended)
 
-1. Open HACS in Home Assistant
-2. Click the three dots menu and select "Custom repositories"
-3. Add this repository URL and select "Integration" as the category
-4. Click "Add"
-5. Search for "SVS Subwoofer" and install
-6. Restart Home Assistant
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=dangerouslaser&repository=svs-subwoofer-ha&category=integration)
+
+1. Open HACS in Home Assistant (or use the button above)
+2. Search for "SVS Subwoofer" and install
+3. Restart Home Assistant
 
 ### Manual Installation
 
